@@ -6,6 +6,9 @@ protocol BackgroundItemScanning {
 
 struct BackgroundItemScanner: BackgroundItemScanning {
   var fileManager: FileManager = .default
+  var privilegedHelperToolDirectories: [URL] = [
+    URL(fileURLWithPath: "/Library/PrivilegedHelperTools")
+  ]
 
   func scanBackgroundItems() -> [BackgroundItem] {
     let userLibrary = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Library")
@@ -17,9 +20,11 @@ struct BackgroundItemScanner: BackgroundItemScanning {
 
     let plistItems = locations
       .flatMap { kind, url in scanPlists(kind: kind, directory: url) }
+    let referencedExecutables = Set(plistItems.compactMap(\.executable))
+    let helperToolItems = scanPrivilegedHelperTools(referencedExecutables: referencedExecutables)
     let serviceManagementItems = scanServiceManagementItems()
 
-    return (plistItems + serviceManagementItems)
+    return (plistItems + helperToolItems + serviceManagementItems)
       .deduplicatedByID()
       .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
   }
@@ -65,6 +70,36 @@ struct BackgroundItemScanner: BackgroundItemScanning {
     }
 
     return nil
+  }
+
+  func scanPrivilegedHelperTools(referencedExecutables: Set<String>) -> [BackgroundItem] {
+    let normalizedReferences = Set(referencedExecutables.map(normalizedFilePath))
+
+    return privilegedHelperToolDirectories.flatMap { directory -> [BackgroundItem] in
+      guard let urls = try? fileManager.contentsOfDirectory(
+        at: directory,
+        includingPropertiesForKeys: [.isRegularFileKey],
+        options: [.skipsHiddenFiles]
+      ) else {
+        return []
+      }
+
+      return urls.map { url in
+        let isReferenced = normalizedReferences.contains(normalizedFilePath(url.path))
+        return BackgroundItem(
+          id: "privileged-helper:\(url.path)",
+          kind: .privilegedHelperTool,
+          label: url.lastPathComponent,
+          path: url.path,
+          executable: url.path,
+          isPotentiallyStale: !isReferenced
+        )
+      }
+    }
+  }
+
+  private func normalizedFilePath(_ path: String) -> String {
+    URL(fileURLWithPath: path).resolvingSymlinksInPath().path
   }
 
   private func scanServiceManagementItems() -> [BackgroundItem] {

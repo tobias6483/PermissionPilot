@@ -18,7 +18,7 @@ The app may surface sensitive local state, including:
 - User TCC database records when macOS allows local inspection.
 - LaunchAgents and LaunchDaemons.
 - Login Items, ServiceManagement records, and background services exposed by `sfltool dumpbtm`.
-- Helper tools and privileged service metadata.
+- Helper tools and privileged service metadata from `/Library/PrivilegedHelperTools`.
 - Local file paths that can reveal installed apps or user-specific setup.
 
 ## Future Changes

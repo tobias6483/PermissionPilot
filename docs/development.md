@@ -39,6 +39,7 @@ The app currently includes:
 - System Settings links for known Privacy & Security panes.
 - LaunchAgent and LaunchDaemon scanning from common system and user locations.
 - Best-effort login item and background task scanning through `/usr/bin/sfltool dumpbtm`.
+- Privileged helper tool scanning from `/Library/PrivilegedHelperTools`.
 - Markdown and JSON report export.
 
 ## Local Planning

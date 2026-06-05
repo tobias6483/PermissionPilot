@@ -16,6 +16,7 @@ PermissionPilot has not shipped a release yet.
 - Run `swift test`.
 - Perform manual QA on supported macOS versions.
 - Manually compare the app's background item view with `sfltool dumpbtm` and common LaunchAgent/LaunchDaemon directories.
+- Manually review `/Library/PrivilegedHelperTools` helper flags for false positives.
 - Review permission-sensitive changes.
 - Create release notes.
 - Attach signed/notarized artifacts only after the signing process is documented.

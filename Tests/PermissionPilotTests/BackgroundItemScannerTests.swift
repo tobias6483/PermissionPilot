@@ -2,6 +2,25 @@ import XCTest
 @testable import PermissionPilotApp
 
 final class BackgroundItemScannerTests: XCTestCase {
+  func testScansPrivilegedHelperToolsAndFlagsUnreferencedExecutables() throws {
+    let temporaryDirectory = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+    let referenced = temporaryDirectory.appendingPathComponent("com.example.referenced")
+    let unreferenced = temporaryDirectory.appendingPathComponent("com.example.unreferenced")
+    try Data().write(to: referenced)
+    try Data().write(to: unreferenced)
+
+    let scanner = BackgroundItemScanner(privilegedHelperToolDirectories: [temporaryDirectory])
+    let items = scanner.scanPrivilegedHelperTools(referencedExecutables: [referenced.path])
+
+    XCTAssertEqual(items.count, 2)
+    XCTAssertFalse(items.first { $0.label == referenced.lastPathComponent }!.isPotentiallyStale)
+    XCTAssertTrue(items.first { $0.label == unreferenced.lastPathComponent }!.isPotentiallyStale)
+  }
+
   func testParsesLoginItemsAndBackgroundTasksFromSFLToolDump() {
     let scanner = BackgroundItemScanner()
     let text = """
@@ -70,4 +89,3 @@ final class BackgroundItemScannerTests: XCTestCase {
     XCTAssertEqual(items[0].executable, "/Users/example/Library/Application Support/Loopback/Loopback.app/Contents/MacOS/Loopback")
   }
 }
-

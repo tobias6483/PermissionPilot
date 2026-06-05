@@ -57,6 +57,7 @@ enum BackgroundItemKind: String, Codable, CaseIterable {
   case loginItem = "Login Item"
   case backgroundTask = "Background Task"
   case serviceManagementItem = "Service Management Item"
+  case privilegedHelperTool = "Privileged Helper Tool"
 }
 
 struct BackgroundItem: Identifiable, Codable, Hashable {

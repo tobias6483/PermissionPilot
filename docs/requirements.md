@@ -12,7 +12,7 @@
 | System Settings deep links | Implemented | Opens relevant Privacy & Security panes when macOS accepts the URL. |
 | LaunchAgents and LaunchDaemons scanner | Partial | Scans common user and system locations plus relevant `sfltool dumpbtm` records. |
 | Login Items scanner | Partial | Parses best-effort `sfltool dumpbtm` output for login items and background tasks. |
-| Helper tool detection | Partial | Marks plist executables that no longer exist as potentially stale. |
+| Helper tool detection | Partial | Scans `/Library/PrivilegedHelperTools` and marks helpers without a LaunchAgent/LaunchDaemon executable reference as potentially stale. |
 | Markdown report export | Implemented | Explicit user action only. |
 | JSON report export | Implemented | Explicit user action only. |
 | No telemetry by default | Implemented | No telemetry or networking code exists. |
