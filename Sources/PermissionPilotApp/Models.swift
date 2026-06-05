@@ -17,7 +17,53 @@ enum PermissionStatus: String, Codable, CaseIterable {
   case unknown
 }
 
-enum PermissionStatusFilter: String, CaseIterable, Identifiable {
+enum TCCAuthorizationColumn: String, Codable, Hashable {
+  case authValue = "auth_value"
+  case allowed = "allowed"
+  case unavailable = "unavailable"
+  case unknown = "unknown"
+}
+
+enum TCCEvidenceKind: String, Codable, Hashable {
+  case databaseUnreadable
+  case databaseMissing
+  case noRecordFound
+  case matchedGranted
+  case matchedDenied
+  case matchedUnknown
+  case serviceUnmapped
+  case queryFailed
+  case schemaUnsupported
+  case databaseRead
+  case legacy
+
+  var title: String {
+    switch self {
+    case .databaseUnreadable: "Database unreadable"
+    case .databaseMissing: "Database missing"
+    case .noRecordFound: "No record found"
+    case .matchedGranted: "Matched granted"
+    case .matchedDenied: "Matched denied"
+    case .matchedUnknown: "Matched unknown"
+    case .serviceUnmapped: "Service unmapped"
+    case .queryFailed: "Query failed"
+    case .schemaUnsupported: "Schema unsupported"
+    case .databaseRead: "Database read"
+    case .legacy: "Evidence"
+    }
+  }
+
+  var isDatabaseUnavailable: Bool {
+    switch self {
+    case .databaseUnreadable, .databaseMissing, .queryFailed, .schemaUnsupported:
+      return true
+    case .noRecordFound, .matchedGranted, .matchedDenied, .matchedUnknown, .serviceUnmapped, .databaseRead, .legacy:
+      return false
+    }
+  }
+}
+
+enum PermissionStatusFilter: String, Codable, CaseIterable, Identifiable {
   case any = "Any"
   case granted = "Granted"
   case denied = "Denied"
@@ -35,7 +81,7 @@ enum PermissionStatusFilter: String, CaseIterable, Identifiable {
   }
 }
 
-enum SignatureFilter: String, CaseIterable, Identifiable {
+enum SignatureFilter: String, Codable, CaseIterable, Identifiable {
   case any = "Any"
   case signed = "Signed"
   case unsignedOrUnknown = "Unsigned"
@@ -43,11 +89,12 @@ enum SignatureFilter: String, CaseIterable, Identifiable {
   var id: String { rawValue }
 }
 
-enum AppSortOrder: String, CaseIterable, Identifiable {
+enum AppSortOrder: String, Codable, CaseIterable, Identifiable {
   case name = "Name"
   case sensitivity = "Sensitivity"
   case permissionStatus = "Status"
   case signature = "Signature"
+  case reviewPriority = "Priority"
 
   var id: String { rawValue }
 }
@@ -68,6 +115,39 @@ struct PermissionGrant: Identifiable, Codable, Hashable {
   let permission: PermissionDefinition
   let status: PermissionStatus
   let evidence: String
+  var evidenceKind: TCCEvidenceKind = .legacy
+  var authorizationColumn: TCCAuthorizationColumn = .unknown
+
+  var statusLine: String {
+    switch evidenceKind {
+    case .matchedGranted:
+      return "TCC record grants this permission."
+    case .matchedDenied:
+      return "TCC record denies this permission."
+    case .matchedUnknown:
+      return "TCC record exists, but its authorization value is not recognized."
+    case .noRecordFound:
+      return "No matching TCC record was found."
+    case .databaseUnreadable:
+      return "The user TCC database could not be read."
+    case .databaseMissing:
+      return "The expected user TCC database was not found."
+    case .serviceUnmapped:
+      return "This permission is not mapped to a TCC service yet."
+    case .queryFailed:
+      return "The TCC query failed."
+    case .schemaUnsupported:
+      return "The TCC database schema was not recognized."
+    case .databaseRead:
+      return "The user TCC database was read."
+    case .legacy:
+      return evidence
+    }
+  }
+
+  var isHighRiskGrant: Bool {
+    status == .granted && permission.sensitivity == .high
+  }
 }
 
 struct PermissionStatusSummary: Equatable {
@@ -139,6 +219,68 @@ struct InstalledApp: Identifiable, Codable, Hashable {
       .sorted()
       .first ?? .low
   }
+
+  var permissionGroups: [PermissionStatus: [PermissionGrant]] {
+    Dictionary(grouping: permissions, by: \.status)
+      .mapValues { grants in
+        grants.sorted {
+          if $0.permission.sensitivity == $1.permission.sensitivity {
+            return $0.permission.name.localizedCaseInsensitiveCompare($1.permission.name) == .orderedAscending
+          }
+          return $0.permission.sensitivity < $1.permission.sensitivity
+        }
+      }
+  }
+
+  var highRiskGrants: [PermissionGrant] {
+    permissions.filter(\.isHighRiskGrant)
+  }
+
+  var reviewPriorityAssessment: ReviewPriorityAssessment {
+    ReviewPriorityAssessment(app: self)
+  }
+}
+
+enum ReviewPriority: String, Codable, CaseIterable, Comparable {
+  case high = "High"
+  case medium = "Medium"
+  case low = "Low"
+
+  static func < (lhs: ReviewPriority, rhs: ReviewPriority) -> Bool {
+    let rank: [ReviewPriority: Int] = [.high: 0, .medium: 1, .low: 2]
+    return rank[lhs, default: 99] < rank[rhs, default: 99]
+  }
+}
+
+struct ReviewPriorityAssessment: Codable, Equatable {
+  let priority: ReviewPriority
+  let reasons: [String]
+
+  init(app: InstalledApp) {
+    var reasons: [String] = []
+    let highSensitivityGrants = app.permissions
+      .filter { $0.status == .granted && $0.permission.sensitivity == .high }
+      .map { $0.permission.name }
+
+    if !highSensitivityGrants.isEmpty {
+      reasons.append("Granted high-sensitivity permissions: \(highSensitivityGrants.joined(separator: ", ")).")
+    }
+
+    if !app.signingInfo.isSigned {
+      reasons.append("Code signature is unsigned or unknown.")
+    }
+
+    if !highSensitivityGrants.isEmpty && !app.signingInfo.isSigned {
+      priority = .high
+    } else if !highSensitivityGrants.isEmpty || !app.signingInfo.isSigned {
+      priority = .medium
+    } else {
+      priority = .low
+      reasons.append("No high-sensitivity grants or unsigned-signing signal were found in this scan.")
+    }
+
+    self.reasons = reasons
+  }
 }
 
 enum BackgroundItemKind: String, Codable, CaseIterable {
@@ -150,7 +292,7 @@ enum BackgroundItemKind: String, Codable, CaseIterable {
   case privilegedHelperTool = "Privileged Helper Tool"
 }
 
-enum BackgroundItemKindFilter: String, CaseIterable, Identifiable {
+enum BackgroundItemKindFilter: String, Codable, CaseIterable, Identifiable {
   case any = "Any"
   case launchAgent = "LaunchAgent"
   case launchDaemon = "LaunchDaemon"
@@ -174,7 +316,7 @@ enum BackgroundItemKindFilter: String, CaseIterable, Identifiable {
   }
 }
 
-enum BackgroundItemSortOrder: String, CaseIterable, Identifiable {
+enum BackgroundItemSortOrder: String, Codable, CaseIterable, Identifiable {
   case label = "Label"
   case kind = "Kind"
   case stale = "Stale"
@@ -189,15 +331,37 @@ struct BackgroundItem: Identifiable, Codable, Hashable {
   let path: String
   let executable: String?
   let isPotentiallyStale: Bool
+  var staleReason: String? = nil
+  var evidence: String? = nil
 }
 
 struct PrivacyReport: Codable {
   let generatedAt: Date
   let apps: [InstalledApp]
   let backgroundItems: [BackgroundItem]
+  var scope: ReportScope = .full
+  var filters: ReportFilterDescription? = nil
+}
+
+enum ReportScope: String, Codable, Equatable {
+  case full
+  case filtered
+}
+
+struct ReportFilterDescription: Codable, Equatable {
+  let appSearchText: String
+  let selectedPermissionID: String?
+  let permissionStatus: PermissionStatusFilter
+  let signature: SignatureFilter
+  let appSortOrder: AppSortOrder
+  let backgroundSearchText: String
+  let backgroundKind: BackgroundItemKindFilter
+  let staleOnly: Bool
+  let backgroundSortOrder: BackgroundItemSortOrder
 }
 
 struct PrivacyReportSummary: Codable, Equatable {
+  let scope: ReportScope
   let appCount: Int
   let signedAppCount: Int
   let unsignedOrUnknownAppCount: Int
@@ -208,6 +372,7 @@ struct PrivacyReportSummary: Codable, Equatable {
   let backgroundItemKindCounts: [BackgroundItemKind: Int]
 
   init(report: PrivacyReport) {
+    scope = report.scope
     appCount = report.apps.count
     signedAppCount = report.apps.filter(\.signingInfo.isSigned).count
     unsignedOrUnknownAppCount = appCount - signedAppCount
@@ -317,6 +482,10 @@ struct AppListFilter: Equatable {
       return lhs.signingInfo.isSigned == rhs.signingInfo.isSigned
         ? compareNames(lhs, rhs)
         : lhs.signingInfo.isSigned && !rhs.signingInfo.isSigned
+    case .reviewPriority:
+      let lhsPriority = lhs.reviewPriorityAssessment.priority
+      let rhsPriority = rhs.reviewPriorityAssessment.priority
+      return lhsPriority == rhsPriority ? compareNames(lhs, rhs) : lhsPriority < rhsPriority
     }
   }
 
@@ -334,6 +503,66 @@ struct AppListFilter: Equatable {
 
   private func compareNames(_ lhs: InstalledApp, _ rhs: InstalledApp) -> Bool {
     lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+  }
+}
+
+enum DashboardGuidance: Equatable {
+  case databaseUnreadable
+  case allPermissionStatesUnknown
+  case noAppsFound
+  case noBackgroundItemsFound
+
+  var title: String {
+    switch self {
+    case .databaseUnreadable: "TCC Visibility Is Limited"
+    case .allPermissionStatesUnknown: "Permission States Are Unknown"
+    case .noAppsFound: "No Apps Found"
+    case .noBackgroundItemsFound: "No Background Items Found"
+    }
+  }
+
+  var message: String {
+    switch self {
+    case .databaseUnreadable:
+      return "macOS protects the user TCC database. PermissionPilot stays read-only; granting Full Disk Access can give the scanner more visibility, but it is optional."
+    case .allPermissionStatesUnknown:
+      return "No grants or denials were visible in this scan. This can happen on a fresh system or when macOS does not expose the protected database to the app."
+    case .noAppsFound:
+      return "No .app bundles were found in /Applications or ~/Applications during this scan."
+    case .noBackgroundItemsFound:
+      return "No LaunchAgents, LaunchDaemons, login items, background tasks, ServiceManagement records, or privileged helper tools were found in scanned locations."
+    }
+  }
+}
+
+enum SystemSettingsLinkStatus: String, CaseIterable, Identifiable {
+  case untested = "Untested"
+  case testedWorking = "Tested working"
+  case testedFailed = "Tested failed"
+
+  var id: String { rawValue }
+}
+
+struct DashboardGuidanceEvaluator {
+  static func guidance(apps: [InstalledApp], backgroundItems: [BackgroundItem]) -> [DashboardGuidance] {
+    var items: [DashboardGuidance] = []
+
+    if apps.isEmpty {
+      items.append(.noAppsFound)
+    } else {
+      let grants = apps.flatMap(\.permissions)
+      if grants.contains(where: { $0.evidenceKind.isDatabaseUnavailable }) {
+        items.append(.databaseUnreadable)
+      } else if !grants.isEmpty && grants.allSatisfy({ $0.status == .unknown }) {
+        items.append(.allPermissionStatesUnknown)
+      }
+    }
+
+    if backgroundItems.isEmpty {
+      items.append(.noBackgroundItemsFound)
+    }
+
+    return items
   }
 }
 

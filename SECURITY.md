@@ -20,8 +20,10 @@ If private reporting is not available, contact the maintainer through their GitH
 - Scanners should remain read-only and should not modify TCC databases, startup items, ServiceManagement records, or helper tool locations.
 - Code signing metadata helps identify app origin, but it is not a complete trust or safety verdict.
 - TCC inspection must remain best-effort and must not bypass macOS protections.
+- TCC evidence should preserve whether data came from modern `auth_value`, legacy `allowed`, no matching record, an unreadable or missing database, or a failed query.
 - Login item and background task inspection must remain read-only and transparent about source data.
 - Privileged helper tool checks should be conservative; an unreferenced helper is a review signal, not proof of compromise.
+- Review priority should remain an audit workflow signal, not malware scoring, compromise detection, or a safety verdict.
 - Privileged operations should be avoided unless clearly justified and reviewed.
 - Any future helper tool, daemon, or background process requires a dedicated security and privacy review before release.
 
@@ -40,7 +42,7 @@ The app should not request or require elevated privileges for the current MVP. I
 
 ## Report Handling
 
-Exported Markdown and JSON reports can contain sensitive local paths, installed app names, bundle identifiers, permission evidence, signing metadata, and background-service records.
+Exported Markdown and JSON reports can contain sensitive local paths, installed app names, bundle identifiers, permission evidence, review-priority evidence, signing metadata, and background-service records. Filtered exports reduce scope to the current view but are still sensitive local artifacts.
 
 Users should avoid posting full reports in public issues. Public bug reports should redact private paths, device-specific details, and any app inventory data that the user does not want to disclose.
 
@@ -61,3 +63,4 @@ Open a dedicated privacy and security review before adding:
 - Hiding security-relevant app behavior from the user.
 - Collecting or selling permission data.
 - Treating code signing, stale helper heuristics, or permission state as a malware verdict.
+- Treating review priority as a malware score or proof of compromise.

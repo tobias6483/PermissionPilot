@@ -7,14 +7,28 @@ protocol TCCDatabaseScanning {
 struct TCCScanResult {
   let records: [TCCAuthorizationRecord]
   let evidence: String
+  var evidenceKind: TCCEvidenceKind = .legacy
+  var authorizationColumn: TCCAuthorizationColumn = .unknown
 
   func grant(for permission: PermissionDefinition, bundleIdentifier: String?, appPath: String) -> PermissionGrant {
     guard let services = TCCServiceMap.servicesByPermissionID[permission.id] else {
-      return PermissionGrant(permission: permission, status: .unknown, evidence: "No TCC service mapping exists for this permission yet.")
+      return PermissionGrant(
+        permission: permission,
+        status: .unknown,
+        evidence: "No TCC service mapping exists for this permission yet.",
+        evidenceKind: .serviceUnmapped,
+        authorizationColumn: authorizationColumn
+      )
     }
 
     guard !records.isEmpty else {
-      return PermissionGrant(permission: permission, status: .unknown, evidence: evidence)
+      return PermissionGrant(
+        permission: permission,
+        status: .unknown,
+        evidence: evidence,
+        evidenceKind: evidenceKind,
+        authorizationColumn: authorizationColumn
+      )
     }
 
     let matched = records.filter { record in
@@ -22,12 +36,34 @@ struct TCCScanResult {
     }
 
     guard !matched.isEmpty else {
-      return PermissionGrant(permission: permission, status: .unknown, evidence: "No matching TCC record was found for this app.")
+      return PermissionGrant(
+        permission: permission,
+        status: .unknown,
+        evidence: "No matching TCC record was found for this app.",
+        evidenceKind: .noRecordFound,
+        authorizationColumn: authorizationColumn
+      )
     }
 
     let status = matched.contains { $0.status == .granted } ? PermissionStatus.granted : matched[0].status
     let serviceList = matched.map(\.service).uniqued().joined(separator: ", ")
-    return PermissionGrant(permission: permission, status: status, evidence: "Matched TCC service record: \(serviceList).")
+    let kind: TCCEvidenceKind
+    switch status {
+    case .granted:
+      kind = .matchedGranted
+    case .denied:
+      kind = .matchedDenied
+    case .unknown:
+      kind = .matchedUnknown
+    }
+
+    return PermissionGrant(
+      permission: permission,
+      status: status,
+      evidence: "Matched TCC service record: \(serviceList). Authorization column: \(authorizationColumn.rawValue).",
+      evidenceKind: kind,
+      authorizationColumn: authorizationColumn
+    )
   }
 }
 
@@ -36,6 +72,7 @@ struct TCCAuthorizationRecord: Hashable {
   let client: String
   let clientType: Int?
   let authorizationValue: Int?
+  var authorizationColumn: TCCAuthorizationColumn = .unknown
 
   var status: PermissionStatus {
     switch authorizationValue {
@@ -68,26 +105,45 @@ struct TCCDatabaseScanner: TCCDatabaseScanning {
 
   func scan() -> TCCScanResult {
     guard FileManager.default.fileExists(atPath: databaseURL.path) else {
-      return TCCScanResult(records: [], evidence: "User TCC database was not found at the expected path.")
+      return TCCScanResult(
+        records: [],
+        evidence: "User TCC database was not found at the expected path: \(databaseURL.path).",
+        evidenceKind: .databaseMissing,
+        authorizationColumn: .unavailable
+      )
     }
 
     let columnsResult = runSQLite(arguments: ["-tabs", databaseURL.path, "PRAGMA table_info(access);"])
     guard columnsResult.exitCode == 0 else {
-      return TCCScanResult(records: [], evidence: "User TCC database was not readable. Grant Full Disk Access to PermissionPilot to inspect TCC records.")
+      return TCCScanResult(
+        records: [],
+        evidence: "User TCC database was not readable. macOS may require Full Disk Access for this app to inspect local TCC records.",
+        evidenceKind: .databaseUnreadable,
+        authorizationColumn: .unavailable
+      )
     }
 
     let columns = parseTableInfo(columnsResult.output)
     guard columns.contains("service"), columns.contains("client") else {
-      return TCCScanResult(records: [], evidence: "TCC access table did not contain expected service/client columns.")
+      return TCCScanResult(
+        records: [],
+        evidence: "TCC access table did not contain expected service/client columns.",
+        evidenceKind: .schemaUnsupported,
+        authorizationColumn: .unavailable
+      )
     }
 
     let valueColumn: String
+    let authorizationColumn: TCCAuthorizationColumn
     if columns.contains("auth_value") {
       valueColumn = "auth_value"
+      authorizationColumn = .authValue
     } else if columns.contains("allowed") {
       valueColumn = "allowed"
+      authorizationColumn = .allowed
     } else {
       valueColumn = "NULL"
+      authorizationColumn = .unavailable
     }
 
     let clientTypeColumn = columns.contains("client_type") ? "client_type" : "NULL"
@@ -95,10 +151,21 @@ struct TCCDatabaseScanner: TCCDatabaseScanning {
     let recordsResult = runSQLite(arguments: ["-tabs", databaseURL.path, query])
 
     guard recordsResult.exitCode == 0 else {
-      return TCCScanResult(records: [], evidence: "TCC records could not be queried: \(recordsResult.error.trimmingCharacters(in: .whitespacesAndNewlines))")
+      let error = recordsResult.error.trimmingCharacters(in: .whitespacesAndNewlines)
+      return TCCScanResult(
+        records: [],
+        evidence: "TCC records could not be queried: \(error.isEmpty ? "sqlite3 exited with status \(recordsResult.exitCode)." : error)",
+        evidenceKind: .queryFailed,
+        authorizationColumn: authorizationColumn
+      )
     }
 
-    return TCCScanResult(records: parseRecords(recordsResult.output), evidence: "Read user TCC database at \(databaseURL.path).")
+    return TCCScanResult(
+      records: parseRecords(recordsResult.output, authorizationColumn: authorizationColumn),
+      evidence: "Read user TCC database at \(databaseURL.path) using \(authorizationColumn.rawValue).",
+      evidenceKind: .databaseRead,
+      authorizationColumn: authorizationColumn
+    )
   }
 
   private func parseTableInfo(_ text: String) -> Set<String> {
@@ -113,7 +180,7 @@ struct TCCDatabaseScanner: TCCDatabaseScanning {
       })
   }
 
-  func parseRecords(_ text: String) -> [TCCAuthorizationRecord] {
+  func parseRecords(_ text: String, authorizationColumn: TCCAuthorizationColumn = .unknown) -> [TCCAuthorizationRecord] {
     text
       .split(separator: "\n")
       .compactMap { line in
@@ -126,7 +193,8 @@ struct TCCDatabaseScanner: TCCDatabaseScanning {
           service: String(fields[0]),
           client: String(fields[1]),
           clientType: Int(fields[2]),
-          authorizationValue: Int(fields[3])
+          authorizationValue: Int(fields[3]),
+          authorizationColumn: authorizationColumn
         )
       }
   }
@@ -172,4 +240,3 @@ private extension Sequence where Element: Hashable {
     return filter { seen.insert($0).inserted }
   }
 }
-

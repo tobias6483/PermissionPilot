@@ -18,7 +18,10 @@ final class BackgroundItemScannerTests: XCTestCase {
 
     XCTAssertEqual(items.count, 2)
     XCTAssertFalse(items.first { $0.label == referenced.lastPathComponent }!.isPotentiallyStale)
-    XCTAssertTrue(items.first { $0.label == unreferenced.lastPathComponent }!.isPotentiallyStale)
+    let staleItem = items.first { $0.label == unreferenced.lastPathComponent }!
+    XCTAssertTrue(staleItem.isPotentiallyStale)
+    XCTAssertTrue(staleItem.staleReason?.contains("not referenced") == true)
+    XCTAssertTrue(staleItem.evidence?.contains("privileged helper") == true)
   }
 
   func testParsesLoginItemsAndBackgroundTasksFromSFLToolDump() {
@@ -87,6 +90,7 @@ final class BackgroundItemScannerTests: XCTestCase {
     XCTAssertEqual(items[0].kind, .launchAgent)
     XCTAssertEqual(items[0].path, "/Users/example/Library/LaunchAgents/com.rogueamoeba.loopbackd.plist")
     XCTAssertEqual(items[0].executable, "/Users/example/Library/Application Support/Loopback/Loopback.app/Contents/MacOS/Loopback")
+    XCTAssertTrue(items[0].evidence?.contains("sfltool") == true)
   }
 
   func testBackgroundItemListFilterCombinesSearchKindAndStaleOnly() {

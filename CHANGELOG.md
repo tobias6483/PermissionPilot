@@ -4,6 +4,13 @@ All notable changes to PermissionPilot will be documented in this file.
 
 ## Unreleased
 
+- Added typed TCC evidence states for unreadable, missing, no-record, matched, unmapped, query-failed, and legacy authorization-column cases.
+- Added first-run guidance for unreadable TCC data, all-unknown permission scans, and empty app/background-item results.
+- Improved app details with grouped permission states, high-risk grant highlights, readable evidence summaries, and conservative review-next hints.
+- Added local runtime System Settings link QA status controls for v0.1 manual readiness checks.
+- Added background item selection and a detail view with stale reasons, evidence, selectable paths, and why-it-matters context.
+- Added conservative app review priority badges and explanations; this is an audit signal, not malware detection.
+- Added full and filtered Markdown/JSON export options with filtered report metadata.
 - Added report scan summaries to Markdown and JSON exports.
 - Added permission status summaries in the sidebar and selected permission detail view.
 - Added background item search, kind filters, stale-only filtering, and sorting.
