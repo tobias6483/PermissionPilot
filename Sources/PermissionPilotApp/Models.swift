@@ -197,6 +197,51 @@ struct PrivacyReport: Codable {
   let backgroundItems: [BackgroundItem]
 }
 
+struct PrivacyReportSummary: Codable, Equatable {
+  let appCount: Int
+  let signedAppCount: Int
+  let unsignedOrUnknownAppCount: Int
+  let highSensitivityGrantCount: Int
+  let backgroundItemCount: Int
+  let potentiallyStaleBackgroundItemCount: Int
+  let permissionSummaries: [PermissionSummary]
+  let backgroundItemKindCounts: [BackgroundItemKind: Int]
+
+  init(report: PrivacyReport) {
+    appCount = report.apps.count
+    signedAppCount = report.apps.filter(\.signingInfo.isSigned).count
+    unsignedOrUnknownAppCount = appCount - signedAppCount
+    highSensitivityGrantCount = report.apps.reduce(0) { count, app in
+      count + app.permissions.filter { $0.status == .granted && $0.permission.sensitivity == .high }.count
+    }
+    backgroundItemCount = report.backgroundItems.count
+    potentiallyStaleBackgroundItemCount = report.backgroundItems.filter(\.isPotentiallyStale).count
+    permissionSummaries = PermissionCatalog.all.map { permission in
+      PermissionSummary(summary: PermissionStatusSummary(permission: permission, apps: report.apps))
+    }
+    backgroundItemKindCounts = Dictionary(grouping: report.backgroundItems, by: \.kind)
+      .mapValues(\.count)
+  }
+}
+
+struct PermissionSummary: Codable, Equatable {
+  let id: String
+  let name: String
+  let sensitivity: Sensitivity
+  let granted: Int
+  let denied: Int
+  let unknown: Int
+
+  init(summary: PermissionStatusSummary) {
+    id = summary.permission.id
+    name = summary.permission.name
+    sensitivity = summary.permission.sensitivity
+    granted = summary.granted
+    denied = summary.denied
+    unknown = summary.unknown
+  }
+}
+
 struct AppListFilter: Equatable {
   var searchText = ""
   var permission: PermissionDefinition?
