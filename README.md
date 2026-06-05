@@ -10,7 +10,9 @@ PermissionPilot has an initial native SwiftUI macOS app scaffold. The current ap
 
 TCC permission-state detection is intentionally conservative. If macOS does not allow the app to read the user's TCC database, or if no matching record exists, PermissionPilot shows `unknown` with evidence instead of guessing. First-run guidance explains these limits and may point to Full Disk Access for more visibility, but the app stays local-first and read-only.
 
-## Planned MVP
+## v0.1 MVP
+
+The planned v0.1 MVP is implemented in the current app:
 
 - Inventory installed apps and known permission states where macOS allows local inspection.
 - Show signing identity metadata such as Team ID and signing authority.
@@ -21,6 +23,8 @@ TCC permission-state detection is intentionally conservative. If macOS does not 
 - Link directly to relevant Privacy & Security panes in System Settings.
 - Scan common LaunchAgents, LaunchDaemons, Login Items, background tasks, and privileged helper-tool locations.
 - Export full or filtered local Markdown and JSON privacy reports.
+
+Some scanners remain intentionally best-effort because macOS controls access to TCC data and some background-service sources. In those cases PermissionPilot reports `unknown` or review-signal evidence instead of guessing.
 
 ## Privacy Stance
 
