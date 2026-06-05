@@ -3,11 +3,33 @@ import Foundation
 enum ReportExporter {
   static func markdown(report: PrivacyReport) -> String {
     let formatter = ISO8601DateFormatter()
+    let summary = PrivacyReportSummary(report: report)
 
     var lines: [String] = [
       "# PermissionPilot Privacy Report",
       "",
       "Generated: \(formatter.string(from: report.generatedAt))",
+      "",
+      "## Scan Summary",
+      "",
+      "- Apps scanned: \(summary.appCount)",
+      "- Signed apps: \(summary.signedAppCount)",
+      "- Unsigned or unknown apps: \(summary.unsignedOrUnknownAppCount)",
+      "- High-sensitivity grants: \(summary.highSensitivityGrantCount)",
+      "- Background items: \(summary.backgroundItemCount)",
+      "- Potentially stale background items: \(summary.potentiallyStaleBackgroundItemCount)",
+      "",
+      "## Permission Summary",
+      "",
+      "| Permission | Sensitivity | Granted | Denied | Unknown |",
+      "| --- | --- | --- | --- | --- |"
+    ]
+
+    for permissionSummary in summary.permissionSummaries {
+      lines.append("| \(permissionSummary.name) | \(permissionSummary.sensitivity.rawValue) | \(permissionSummary.granted) | \(permissionSummary.denied) | \(permissionSummary.unknown) |")
+    }
+
+    lines += [
       "",
       "## Apps",
       ""
@@ -57,8 +79,13 @@ enum ReportExporter {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     encoder.dateEncodingStrategy = .iso8601
-    return try encoder.encode(report)
+    return try encoder.encode(ExportedPrivacyReport(summary: PrivacyReportSummary(report: report), report: report))
   }
+}
+
+private struct ExportedPrivacyReport: Codable {
+  let summary: PrivacyReportSummary
+  let report: PrivacyReport
 }
 
 private extension String {

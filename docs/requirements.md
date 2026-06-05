@@ -17,8 +17,8 @@
 | Login Items scanner | Partial | Parses best-effort `sfltool dumpbtm` output for login items and background tasks. |
 | Helper tool detection | Partial | Scans `/Library/PrivilegedHelperTools` and marks helpers without a LaunchAgent/LaunchDaemon executable reference as potentially stale. |
 | Background item filtering and sorting | Implemented | Search by labels and paths, filter by item kind or stale state, and sort by label, kind, or stale status. |
-| Markdown report export | Implemented | Explicit user action only. |
-| JSON report export | Implemented | Explicit user action only. |
+| Markdown report export | Implemented | Explicit user action only, with scan summary, permission counts, apps, and background items. |
+| JSON report export | Implemented | Explicit user action only, with summary metadata and raw report data. |
 | No telemetry by default | Implemented | No telemetry or networking code exists. |
 
 ## Release Gate For v0.1
