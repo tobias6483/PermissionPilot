@@ -38,6 +38,7 @@ The app currently includes:
 - Educational permission catalog and sensitivity labels.
 - System Settings links for known Privacy & Security panes.
 - LaunchAgent and LaunchDaemon scanning from common system and user locations.
+- Best-effort login item and background task scanning through `/usr/bin/sfltool dumpbtm`.
 - Markdown and JSON report export.
 
 ## Local Planning

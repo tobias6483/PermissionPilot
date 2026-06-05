@@ -23,6 +23,7 @@ required_files=(
   ".github/workflows/ci.yml"
   "Sources/PermissionPilotApp/PermissionPilotApp.swift"
   "Sources/PermissionPilotApp/TCCDatabaseScanner.swift"
+  "Tests/PermissionPilotTests/BackgroundItemScannerTests.swift"
   "Tests/PermissionPilotTests/InstalledAppTests.swift"
   "Tests/PermissionPilotTests/ReportExporterTests.swift"
   "Tests/PermissionPilotTests/TCCDatabaseScannerTests.swift"

@@ -15,8 +15,12 @@ struct BackgroundItemScanner: BackgroundItemScanning {
       (.launchDaemon, URL(fileURLWithPath: "/Library/LaunchDaemons"))
     ]
 
-    return locations
+    let plistItems = locations
       .flatMap { kind, url in scanPlists(kind: kind, directory: url) }
+    let serviceManagementItems = scanServiceManagementItems()
+
+    return (plistItems + serviceManagementItems)
+      .deduplicatedByID()
       .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
   }
 
@@ -61,5 +65,134 @@ struct BackgroundItemScanner: BackgroundItemScanning {
     }
 
     return nil
+  }
+
+  private func scanServiceManagementItems() -> [BackgroundItem] {
+    let result = runSFLToolDumpBTM()
+    guard result.exitCode == 0 else {
+      return []
+    }
+
+    return parseSFLToolDumpBTM(result.output)
+  }
+
+  func parseSFLToolDumpBTM(_ text: String) -> [BackgroundItem] {
+    text
+      .components(separatedBy: "\n #")
+      .compactMap(parseSFLToolRecord)
+  }
+
+  private func parseSFLToolRecord(_ record: String) -> BackgroundItem? {
+    let lines = record
+      .split(separator: "\n", omittingEmptySubsequences: false)
+      .map(String.init)
+
+    let fields = Dictionary(uniqueKeysWithValues: lines.compactMap(parseKeyValue))
+    guard let type = fields["Type"], let kind = kindFromSFLToolType(type) else {
+      return nil
+    }
+
+    let label = fields["Name"] ?? fields["Identifier"] ?? "Unknown Background Item"
+    let identifier = fields["Identifier"] ?? fields["UUID"] ?? label
+    let path = normalizeSFLToolPath(fields["URL"]) ?? fields["URL"] ?? identifier
+    let executable = normalizeSFLToolPath(fields["Executable Path"]) ?? fields["Executable Path"]
+    let stalePath = executable ?? path
+    let isStale = isAbsoluteFilePath(stalePath) && !fileManager.fileExists(atPath: stalePath)
+
+    return BackgroundItem(
+      id: "sfltool:\(identifier):\(path)",
+      kind: kind,
+      label: label,
+      path: path,
+      executable: executable,
+      isPotentiallyStale: isStale
+    )
+  }
+
+  private func parseKeyValue(_ line: String) -> (String, String)? {
+    let trimmed = line.trimmingCharacters(in: .whitespaces)
+    guard let separator = trimmed.firstIndex(of: ":") else {
+      return nil
+    }
+
+    let key = String(trimmed[..<separator]).trimmingCharacters(in: .whitespaces)
+    let value = String(trimmed[trimmed.index(after: separator)...]).trimmingCharacters(in: .whitespaces)
+    guard !key.isEmpty, !value.isEmpty, value != "(null)" else {
+      return nil
+    }
+
+    return (key, value)
+  }
+
+  private func kindFromSFLToolType(_ type: String) -> BackgroundItemKind? {
+    let normalized = type.lowercased()
+
+    if normalized.contains("login item") {
+      return .loginItem
+    }
+
+    if normalized.contains("background tasks") {
+      return .backgroundTask
+    }
+
+    if normalized.contains("launch agent") || normalized.contains("legacy agent") || normalized == "agent" || normalized.hasPrefix("agent ") {
+      return .launchAgent
+    }
+
+    if normalized.contains("launch daemon") || normalized.contains("legacy daemon") || normalized == "daemon" || normalized.hasPrefix("daemon ") {
+      return .launchDaemon
+    }
+
+    if normalized.contains("helper") || normalized.contains("service") {
+      return .serviceManagementItem
+    }
+
+    return nil
+  }
+
+  private func normalizeSFLToolPath(_ value: String?) -> String? {
+    guard let value, !value.isEmpty else {
+      return nil
+    }
+
+    if value.hasPrefix("file://"), let url = URL(string: value) {
+      return url.path
+    }
+
+    return value.removingPercentEncoding ?? value
+  }
+
+  private func isAbsoluteFilePath(_ path: String) -> Bool {
+    path.hasPrefix("/")
+  }
+
+  private func runSFLToolDumpBTM() -> (exitCode: Int32, output: String) {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/sfltool")
+    process.arguments = ["dumpbtm"]
+
+    let outputPipe = Pipe()
+    process.standardOutput = outputPipe
+    process.standardError = Pipe()
+
+    do {
+      try process.run()
+      process.waitUntilExit()
+    } catch {
+      return (1, "")
+    }
+
+    let output = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    return (process.terminationStatus, output)
+  }
+}
+
+private extension Array where Element == BackgroundItem {
+  func deduplicatedByID() -> [BackgroundItem] {
+    var seen = Set<String>()
+    return filter { item in
+      let key = "\(item.kind.rawValue):\(item.label):\(item.path)"
+      return seen.insert(key).inserted
+    }
   }
 }

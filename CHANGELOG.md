@@ -9,6 +9,7 @@ All notable changes to PermissionPilot will be documented in this file.
 - Added best-effort user TCC database scanner and permission record matching.
 - Added permission catalog, sensitivity labels, and System Settings links.
 - Added LaunchAgent and LaunchDaemon scanning.
+- Added best-effort login item and background task scanning through `sfltool dumpbtm`.
 - Added Markdown and JSON report export with unit tests.
 - Added initial public repository documentation and governance files.
 - Added local repository check script.
