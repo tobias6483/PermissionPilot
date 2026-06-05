@@ -119,6 +119,65 @@ final class InstalledAppTests: XCTestCase {
     XCTAssertTrue(summary.hasKnownState)
   }
 
+  func testReviewPriorityIsHighForUnsignedHighSensitivityGrant() {
+    let app = makeApp(
+      name: "Recorder",
+      signingInfo: .unknown,
+      grants: [
+        PermissionGrant(permission: PermissionCatalog.all[0], status: .granted, evidence: "Matched.", evidenceKind: .matchedGranted)
+      ]
+    )
+
+    let assessment = app.reviewPriorityAssessment
+
+    XCTAssertEqual(assessment.priority, .high)
+    XCTAssertTrue(assessment.reasons.contains { $0.contains("Screen Recording") })
+    XCTAssertFalse(assessment.reasons.joined(separator: " ").localizedCaseInsensitiveContains("malware"))
+  }
+
+  func testReviewPriorityIsMediumForUnsignedWithoutSensitiveGrants() {
+    let app = makeApp(
+      name: "Unsigned",
+      signingInfo: .unknown,
+      grants: [
+        PermissionGrant(permission: PermissionCatalog.all[0], status: .unknown, evidence: "No record.", evidenceKind: .noRecordFound)
+      ]
+    )
+
+    XCTAssertEqual(app.reviewPriorityAssessment.priority, .medium)
+  }
+
+  func testReviewPriorityIsLowWithoutSignals() {
+    let signed = CodeSignatureInfo(
+      isSigned: true,
+      teamIdentifier: "TEAMID",
+      authorities: ["Developer ID Application"],
+      identifier: "com.example.signed",
+      evidence: "Signed."
+    )
+    let app = makeApp(
+      name: "Signed",
+      signingInfo: signed,
+      grants: [
+        PermissionGrant(permission: PermissionCatalog.all[0], status: .unknown, evidence: "No record.", evidenceKind: .noRecordFound)
+      ]
+    )
+
+    XCTAssertEqual(app.reviewPriorityAssessment.priority, .low)
+  }
+
+  func testGuidanceDetectsDatabaseUnreadableAndEmptyStates() {
+    let app = makeApp(
+      name: "Unreadable",
+      grants: [
+        PermissionGrant(permission: PermissionCatalog.all[0], status: .unknown, evidence: "Unreadable.", evidenceKind: .databaseUnreadable)
+      ]
+    )
+
+    XCTAssertEqual(DashboardGuidanceEvaluator.guidance(apps: [app], backgroundItems: []), [.databaseUnreadable, .noBackgroundItemsFound])
+    XCTAssertEqual(DashboardGuidanceEvaluator.guidance(apps: [], backgroundItems: []), [.noAppsFound, .noBackgroundItemsFound])
+  }
+
   private func makeApp(
     name: String,
     bundleIdentifier: String? = nil,

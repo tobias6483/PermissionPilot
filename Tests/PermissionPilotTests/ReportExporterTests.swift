@@ -16,7 +16,8 @@ final class ReportExporterTests: XCTestCase {
             PermissionGrant(
               permission: PermissionCatalog.all[0],
               status: .unknown,
-              evidence: "No local TCC evidence yet."
+              evidence: "No local TCC evidence yet.",
+              evidenceKind: .noRecordFound
             )
           ]
         )
@@ -28,7 +29,9 @@ final class ReportExporterTests: XCTestCase {
           label: "com.example.agent",
           path: "/Library/LaunchAgents/com.example.agent.plist",
           executable: "/Applications/Example.app/Contents/MacOS/helper",
-          isPotentiallyStale: true
+          isPotentiallyStale: true,
+          staleReason: "Referenced executable was not found.",
+          evidence: "Parsed test plist."
         )
       ]
     )
@@ -43,6 +46,8 @@ final class ReportExporterTests: XCTestCase {
     XCTAssertTrue(markdown.contains("Example"))
     XCTAssertTrue(markdown.contains("com.example.agent"))
     XCTAssertTrue(markdown.contains("Potentially stale"))
+    XCTAssertTrue(markdown.contains("No record found"))
+    XCTAssertTrue(markdown.contains("Review priority"))
   }
 
   func testJSONEncodesReport() throws {
@@ -55,6 +60,45 @@ final class ReportExporterTests: XCTestCase {
     XCTAssertTrue(text.contains("\"report\""))
     XCTAssertTrue(text.contains("\"appCount\""))
     XCTAssertTrue(text.contains("\"backgroundItems\""))
+    XCTAssertTrue(text.contains("\"scope\""))
+  }
+
+  func testFilteredReportExportsScopeAndSummaryForFilteredData() throws {
+    let report = PrivacyReport(
+      generatedAt: Date(timeIntervalSince1970: 0),
+      apps: [
+        InstalledApp(
+          id: "filtered",
+          name: "Filtered",
+          bundleIdentifier: "com.example.filtered",
+          path: "/Applications/Filtered.app",
+          permissions: [
+            PermissionGrant(permission: PermissionCatalog.all[0], status: .granted, evidence: "Matched.", evidenceKind: .matchedGranted)
+          ]
+        )
+      ],
+      backgroundItems: [],
+      scope: .filtered,
+      filters: ReportFilterDescription(
+        appSearchText: "filtered",
+        selectedPermissionID: PermissionCatalog.all[0].id,
+        permissionStatus: .granted,
+        signature: .any,
+        appSortOrder: .reviewPriority,
+        backgroundSearchText: "",
+        backgroundKind: .any,
+        staleOnly: false,
+        backgroundSortOrder: .label
+      )
+    )
+
+    let markdown = ReportExporter.markdown(report: report)
+    let json = String(decoding: try ReportExporter.json(report: report), as: UTF8.self)
+
+    XCTAssertTrue(markdown.contains("Filtered Privacy Report"))
+    XCTAssertTrue(markdown.contains("Scope: filtered"))
+    XCTAssertTrue(json.contains("\"scope\" : \"filtered\""))
+    XCTAssertTrue(json.contains("\"appCount\" : 1"))
   }
 
   func testReportSummaryCountsAppsPermissionsAndBackgroundItems() {

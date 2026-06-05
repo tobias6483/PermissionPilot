@@ -4,11 +4,17 @@ import SwiftUI
 struct DashboardView: View {
   @EnvironmentObject private var store: DashboardStore
   @State private var selectedApp: InstalledApp?
+  @State private var selectedBackgroundItem: BackgroundItem?
   @State private var exportMessage: String?
   @State private var searchText = ""
   @State private var permissionStatusFilter: PermissionStatusFilter = .any
   @State private var signatureFilter: SignatureFilter = .any
   @State private var sortOrder: AppSortOrder = .name
+  @State private var backgroundSearchText = ""
+  @State private var backgroundKindFilter: BackgroundItemKindFilter = .any
+  @State private var backgroundStaleOnly = false
+  @State private var backgroundSortOrder: BackgroundItemSortOrder = .label
+  @State private var systemSettingsLinkStatuses: [String: SystemSettingsLinkStatus] = [:]
 
   var body: some View {
     NavigationSplitView {
@@ -33,11 +39,18 @@ struct DashboardView: View {
         }
 
         Menu {
-          Button("Markdown...") {
-            exportMarkdown()
+          Button("Full Markdown...") {
+            exportMarkdown(scope: .full)
           }
-          Button("JSON...") {
-            exportJSON()
+          Button("Full JSON...") {
+            exportJSON(scope: .full)
+          }
+          Divider()
+          Button("Filtered Markdown...") {
+            exportMarkdown(scope: .filtered)
+          }
+          Button("Filtered JSON...") {
+            exportJSON(scope: .filtered)
           }
         } label: {
           Label("Export Report", systemImage: "square.and.arrow.down")
@@ -98,10 +111,15 @@ struct DashboardView: View {
   private var detailPane: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
+        ForEach(guidanceItems, id: \.self) { guidance in
+          GuidanceCard(guidance: guidance)
+        }
+
         if let permission = store.selectedPermission {
           PermissionExplanationCard(
             permission: permission,
-            summary: PermissionStatusSummary(permission: permission, apps: store.apps)
+            summary: PermissionStatusSummary(permission: permission, apps: store.apps),
+            linkStatus: bindingForSystemSettingsStatus(permission)
           )
         }
 
@@ -112,7 +130,18 @@ struct DashboardView: View {
           EmptySelectionView()
         }
 
-        BackgroundItemsView(items: store.backgroundItems)
+        BackgroundItemsView(
+          items: store.backgroundItems,
+          selectedItem: $selectedBackgroundItem,
+          searchText: $backgroundSearchText,
+          kindFilter: $backgroundKindFilter,
+          staleOnly: $backgroundStaleOnly,
+          sortOrder: $backgroundSortOrder
+        )
+
+        if let selectedBackgroundItem {
+          BackgroundItemDetail(item: selectedBackgroundItem)
+        }
 
         if let exportMessage {
           Text(exportMessage)
@@ -136,6 +165,19 @@ struct DashboardView: View {
     ).apply(to: store.apps)
   }
 
+  private var filteredBackgroundItems: [BackgroundItem] {
+    BackgroundItemListFilter(
+      searchText: backgroundSearchText,
+      kind: backgroundKindFilter,
+      staleOnly: backgroundStaleOnly,
+      sortOrder: backgroundSortOrder
+    ).apply(to: store.backgroundItems)
+  }
+
+  private var guidanceItems: [DashboardGuidance] {
+    DashboardGuidanceEvaluator.guidance(apps: store.apps, backgroundItems: store.backgroundItems)
+  }
+
   private var staleBackgroundItemCount: Int {
     store.backgroundItems.filter(\.isPotentiallyStale).count
   }
@@ -153,34 +195,70 @@ struct DashboardView: View {
     }
   }
 
-  private func exportMarkdown() {
+  private func report(for scope: ReportScope) -> PrivacyReport {
+    switch scope {
+    case .full:
+      return store.report
+    case .filtered:
+      return PrivacyReport(
+        generatedAt: Date(),
+        apps: filteredApps,
+        backgroundItems: filteredBackgroundItems,
+        scope: .filtered,
+        filters: currentFilterDescription
+      )
+    }
+  }
+
+  private var currentFilterDescription: ReportFilterDescription {
+    ReportFilterDescription(
+      appSearchText: searchText,
+      selectedPermissionID: store.selectedPermission?.id,
+      permissionStatus: permissionStatusFilter,
+      signature: signatureFilter,
+      appSortOrder: sortOrder,
+      backgroundSearchText: backgroundSearchText,
+      backgroundKind: backgroundKindFilter,
+      staleOnly: backgroundStaleOnly,
+      backgroundSortOrder: backgroundSortOrder
+    )
+  }
+
+  private func bindingForSystemSettingsStatus(_ permission: PermissionDefinition) -> Binding<SystemSettingsLinkStatus> {
+    Binding(
+      get: { systemSettingsLinkStatuses[permission.id, default: .untested] },
+      set: { systemSettingsLinkStatuses[permission.id] = $0 }
+    )
+  }
+
+  private func exportMarkdown(scope: ReportScope) {
     let panel = NSSavePanel()
     panel.allowedContentTypes = [.plainText]
-    panel.nameFieldStringValue = "permissionpilot-report.md"
+    panel.nameFieldStringValue = scope == .filtered ? "permissionpilot-filtered-report.md" : "permissionpilot-report.md"
 
     guard panel.runModal() == .OK, let url = panel.url else {
       return
     }
 
     do {
-      try ReportExporter.markdown(report: store.report).write(to: url, atomically: true, encoding: .utf8)
+      try ReportExporter.markdown(report: report(for: scope)).write(to: url, atomically: true, encoding: .utf8)
       exportMessage = "Saved Markdown report to \(url.path)."
     } catch {
       exportMessage = "Could not save Markdown report: \(error.localizedDescription)"
     }
   }
 
-  private func exportJSON() {
+  private func exportJSON(scope: ReportScope) {
     let panel = NSSavePanel()
     panel.allowedContentTypes = [.json]
-    panel.nameFieldStringValue = "permissionpilot-report.json"
+    panel.nameFieldStringValue = scope == .filtered ? "permissionpilot-filtered-report.json" : "permissionpilot-report.json"
 
     guard panel.runModal() == .OK, let url = panel.url else {
       return
     }
 
     do {
-      try ReportExporter.json(report: store.report).write(to: url)
+      try ReportExporter.json(report: report(for: scope)).write(to: url)
       exportMessage = "Saved JSON report to \(url.path)."
     } catch {
       exportMessage = "Could not save JSON report: \(error.localizedDescription)"
@@ -244,7 +322,7 @@ private struct AppListControls: View {
             Text(order.rawValue).tag(order)
           }
         }
-        .frame(width: 150)
+        .frame(width: 170)
       }
     }
     .padding(12)
@@ -267,6 +345,7 @@ private struct AppListRow: View {
           StatusBadge(status: grant.status)
         }
 
+        ReviewPriorityBadge(priority: app.reviewPriorityAssessment.priority)
         SensitivityBadge(sensitivity: app.highestSensitivity)
       }
 
@@ -290,6 +369,7 @@ private struct AppListRow: View {
 private struct PermissionExplanationCard: View {
   let permission: PermissionDefinition
   let summary: PermissionStatusSummary
+  @Binding var linkStatus: SystemSettingsLinkStatus
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
@@ -310,6 +390,18 @@ private struct PermissionExplanationCard: View {
         Label("Open System Settings", systemImage: "gear")
       }
       .buttonStyle(.borderedProminent)
+
+      Picker("Link QA", selection: $linkStatus) {
+        ForEach(SystemSettingsLinkStatus.allCases) { status in
+          Text(status.rawValue).tag(status)
+        }
+      }
+      .pickerStyle(.segmented)
+      .frame(maxWidth: 420)
+
+      Text("Manual QA status is local runtime state only; it does not modify permissions or System Settings.")
+        .font(.caption)
+        .foregroundStyle(.secondary)
     }
   }
 }
@@ -396,6 +488,7 @@ private struct AppIdentityDetail: View {
 
       IdentityRow(title: "Bundle ID", value: app.bundleIdentifier ?? "Unknown")
       IdentityRow(title: "Code Signature", value: app.signingInfo.isSigned ? "Signed" : "Unsigned or unknown")
+      IdentityRow(title: "Review Priority", value: app.reviewPriorityAssessment.priority.rawValue)
 
       if let teamIdentifier = app.signingInfo.teamIdentifier {
         IdentityRow(title: "Team ID", value: teamIdentifier)
@@ -412,6 +505,17 @@ private struct AppIdentityDetail: View {
       Text(app.signingInfo.evidence)
         .font(.caption)
         .foregroundStyle(.secondary)
+
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Why this priority")
+          .font(.caption.weight(.semibold))
+          .foregroundStyle(.secondary)
+        ForEach(app.reviewPriorityAssessment.reasons, id: \.self) { reason in
+          Text(reason)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+      }
     }
   }
 }
@@ -424,21 +528,64 @@ private struct AppPermissionDetail: View {
       Text("Permission State")
         .font(.title3.weight(.semibold))
 
-      ForEach(app.permissions) { grant in
-        HStack(alignment: .top) {
-          VStack(alignment: .leading, spacing: 3) {
-            Text(grant.permission.name)
-              .font(.headline)
-            Text(grant.evidence)
-              .font(.caption)
-              .foregroundStyle(.secondary)
-          }
+      ForEach([PermissionStatus.granted, .denied, .unknown], id: \.self) { status in
+        let grants = app.permissionGroups[status, default: []]
+        if !grants.isEmpty {
+          Text(status.rawValue.capitalized)
+            .font(.headline)
 
-          Spacer()
-          StatusBadge(status: grant.status)
+          ForEach(grants) { grant in
+            HStack(alignment: .top) {
+              VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 6) {
+                  Text(grant.permission.name)
+                    .font(.subheadline.weight(.semibold))
+                  if grant.isHighRiskGrant {
+                    Label("High-risk grant", systemImage: "exclamationmark.triangle.fill")
+                      .font(.caption.weight(.semibold))
+                      .foregroundStyle(.red)
+                  }
+                }
+
+                Text(reviewHint(for: grant))
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+
+                HStack(spacing: 8) {
+                  EvidenceKindBadge(kind: grant.evidenceKind)
+                  Text("Column: \(grant.authorizationColumn.rawValue)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                }
+
+                Text(grant.evidence)
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+                  .textSelection(.enabled)
+              }
+
+              Spacer()
+              StatusBadge(status: grant.status)
+            }
+            Divider()
+          }
         }
-        Divider()
       }
+    }
+  }
+
+  private func reviewHint(for grant: PermissionGrant) -> String {
+    if grant.isHighRiskGrant {
+      return "Review next: confirm this app still needs \(grant.permission.name)."
+    }
+
+    switch grant.status {
+    case .granted:
+      return "Review when auditing apps that actively use this capability."
+    case .denied:
+      return "Denied record found; usually lower priority unless unexpected."
+    case .unknown:
+      return grant.statusLine
     }
   }
 }
@@ -462,10 +609,11 @@ private struct IdentityRow: View {
 
 private struct BackgroundItemsView: View {
   let items: [BackgroundItem]
-  @State private var searchText = ""
-  @State private var kindFilter: BackgroundItemKindFilter = .any
-  @State private var staleOnly = false
-  @State private var sortOrder: BackgroundItemSortOrder = .label
+  @Binding var selectedItem: BackgroundItem?
+  @Binding var searchText: String
+  @Binding var kindFilter: BackgroundItemKindFilter
+  @Binding var staleOnly: Bool
+  @Binding var sortOrder: BackgroundItemSortOrder
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
@@ -494,7 +642,12 @@ private struct BackgroundItemsView: View {
         ContentUnavailableView("No Matching Background Items", systemImage: "line.3.horizontal.decrease.circle")
       } else {
         ForEach(filteredItems) { item in
-          BackgroundItemRow(item: item)
+          Button {
+            selectedItem = item
+          } label: {
+            BackgroundItemRow(item: item, isSelected: selectedItem?.id == item.id)
+          }
+          .buttonStyle(.plain)
           Divider()
         }
       }
@@ -547,6 +700,7 @@ private struct BackgroundItemControls: View {
 
 private struct BackgroundItemRow: View {
   let item: BackgroundItem
+  let isSelected: Bool
 
   var body: some View {
     HStack(alignment: .top) {
@@ -571,6 +725,32 @@ private struct BackgroundItemRow: View {
           .foregroundStyle(.orange)
       }
     }
+    .padding(8)
+    .background(isSelected ? Color.accentColor.opacity(0.10) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+  }
+}
+
+private struct BackgroundItemDetail: View {
+  let item: BackgroundItem
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Background Item Detail")
+        .font(.title3.weight(.semibold))
+
+      IdentityRow(title: "Kind", value: item.kind.rawValue)
+      IdentityRow(title: "Label", value: item.label)
+      IdentityRow(title: "Path", value: item.path)
+      IdentityRow(title: "Executable", value: item.executable ?? "Unknown")
+      IdentityRow(title: "Stale", value: item.isPotentiallyStale ? "Potentially stale" : "No stale signal")
+      IdentityRow(title: "Stale Reason", value: item.staleReason ?? "None")
+      IdentityRow(title: "Evidence", value: item.evidence ?? "No additional evidence")
+
+      ExplanationRow(
+        title: "Why this matters",
+        text: "Background items can start code outside the main app launch path. A stale item is a review signal that a helper, launch record, or login item may no longer match an installed executable."
+      )
+    }
   }
 }
 
@@ -581,6 +761,35 @@ private struct EmptySelectionView: View {
       systemImage: "sidebar.left",
       description: Text("Choose an installed app to inspect its current permission inventory.")
     )
+  }
+}
+
+private struct GuidanceCard: View {
+  let guidance: DashboardGuidance
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 8) {
+        Image(systemName: "info.circle")
+        Text(guidance.title)
+          .font(.headline)
+      }
+
+      Text(guidance.message)
+        .font(.callout)
+        .foregroundStyle(.secondary)
+
+      if guidance == .databaseUnreadable,
+         let permission = PermissionCatalog.all.first(where: { $0.id == "full-disk-access" }) {
+        Button {
+          SystemSettingsLinker.open(permission)
+        } label: {
+          Label("Open Full Disk Access", systemImage: "internaldrive")
+        }
+      }
+    }
+    .padding(12)
+    .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
   }
 }
 
@@ -616,6 +825,39 @@ private struct SensitivityBadge: View {
     case .medium: .orange
     case .low: .green
     }
+  }
+}
+
+private struct ReviewPriorityBadge: View {
+  let priority: ReviewPriority
+
+  var body: some View {
+    Text("\(priority.rawValue) priority")
+      .font(.caption.weight(.semibold))
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .background(color.opacity(0.14), in: Capsule())
+      .foregroundStyle(color)
+  }
+
+  private var color: Color {
+    switch priority {
+    case .high: .red
+    case .medium: .orange
+    case .low: .secondary
+    }
+  }
+}
+
+private struct EvidenceKindBadge: View {
+  let kind: TCCEvidenceKind
+
+  var body: some View {
+    Text(kind.title)
+      .font(.caption2.weight(.semibold))
+      .padding(.horizontal, 6)
+      .padding(.vertical, 3)
+      .background(.quaternary, in: Capsule())
   }
 }
 

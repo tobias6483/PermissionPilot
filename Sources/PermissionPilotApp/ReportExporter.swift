@@ -6,9 +6,10 @@ enum ReportExporter {
     let summary = PrivacyReportSummary(report: report)
 
     var lines: [String] = [
-      "# PermissionPilot Privacy Report",
+      report.scope == .filtered ? "# PermissionPilot Filtered Privacy Report" : "# PermissionPilot Privacy Report",
       "",
       "Generated: \(formatter.string(from: report.generatedAt))",
+      "Scope: \(report.scope.rawValue)",
       "",
       "## Scan Summary",
       "",
@@ -24,6 +25,13 @@ enum ReportExporter {
       "| Permission | Sensitivity | Granted | Denied | Unknown |",
       "| --- | --- | --- | --- | --- |"
     ]
+
+    if report.scope == .filtered {
+      lines += [
+        "Note: This filtered report includes only the apps and background items visible under the current filters at export time.",
+        ""
+      ]
+    }
 
     for permissionSummary in summary.permissionSummaries {
       lines.append("| \(permissionSummary.name) | \(permissionSummary.sensitivity.rawValue) | \(permissionSummary.granted) | \(permissionSummary.denied) | \(permissionSummary.unknown) |")
@@ -44,12 +52,14 @@ enum ReportExporter {
       lines.append("- Team ID: \(app.signingInfo.teamIdentifier ?? "unknown")")
       lines.append("- Signing authority: \(app.signingInfo.authorities.joined(separator: " -> ").nilIfEmpty ?? "unknown")")
       lines.append("- Highest sensitivity: \(app.highestSensitivity.rawValue)")
+      lines.append("- Review priority: \(app.reviewPriorityAssessment.priority.rawValue)")
+      lines.append("- Priority evidence: \(app.reviewPriorityAssessment.reasons.joined(separator: " "))")
       lines.append("")
-      lines.append("| Permission | Sensitivity | Status | Evidence |")
-      lines.append("| --- | --- | --- | --- |")
+      lines.append("| Permission | Sensitivity | Status | Evidence state | Authorization column | Evidence |")
+      lines.append("| --- | --- | --- | --- | --- | --- |")
 
       for grant in app.permissions {
-        lines.append("| \(grant.permission.name) | \(grant.permission.sensitivity.rawValue) | \(grant.status.rawValue) | \(grant.evidence) |")
+        lines.append("| \(grant.permission.name) | \(grant.permission.sensitivity.rawValue) | \(grant.status.rawValue) | \(grant.evidenceKind.title) | \(grant.authorizationColumn.rawValue) | \(grant.evidence) |")
       }
 
       lines.append("")
@@ -61,16 +71,16 @@ enum ReportExporter {
     if report.backgroundItems.isEmpty {
       lines.append("No LaunchAgents or LaunchDaemons were found in scanned locations.")
     } else {
-      lines.append("| Kind | Label | Path | Executable | Potentially stale |")
-      lines.append("| --- | --- | --- | --- | --- |")
+      lines.append("| Kind | Label | Path | Executable | Potentially stale | Stale reason | Evidence |")
+      lines.append("| --- | --- | --- | --- | --- | --- | --- |")
 
       for item in report.backgroundItems {
-        lines.append("| \(item.kind.rawValue) | \(item.label) | \(item.path) | \(item.executable ?? "unknown") | \(item.isPotentiallyStale ? "yes" : "no") |")
+        lines.append("| \(item.kind.rawValue) | \(item.label) | \(item.path) | \(item.executable ?? "unknown") | \(item.isPotentiallyStale ? "yes" : "no") | \(item.staleReason ?? "none") | \(item.evidence ?? "none") |")
       }
     }
 
     lines.append("")
-    lines.append("Note: Unknown permission states mean macOS did not expose that state to this MVP scanner.")
+    lines.append("Note: Unknown permission states mean macOS did not expose that state to this MVP scanner. Review priority is an audit signal, not a malware verdict.")
 
     return lines.joined(separator: "\n")
   }

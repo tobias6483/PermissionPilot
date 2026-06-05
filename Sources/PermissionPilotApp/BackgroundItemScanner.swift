@@ -56,7 +56,9 @@ struct BackgroundItemScanner: BackgroundItemScanning {
       label: label,
       path: url.path,
       executable: executable,
-      isPotentiallyStale: executable.map { !fileManager.fileExists(atPath: $0) } ?? false
+      isPotentiallyStale: executable.map { !fileManager.fileExists(atPath: $0) } ?? false,
+      staleReason: executable.flatMap { fileManager.fileExists(atPath: $0) ? nil : "Referenced executable was not found at \($0)." },
+      evidence: "Parsed \(kind.rawValue) property list at \(url.path)."
     )
   }
 
@@ -92,7 +94,9 @@ struct BackgroundItemScanner: BackgroundItemScanning {
           label: url.lastPathComponent,
           path: url.path,
           executable: url.path,
-          isPotentiallyStale: !isReferenced
+          isPotentiallyStale: !isReferenced,
+          staleReason: isReferenced ? nil : "Privileged helper tool was not referenced by scanned LaunchAgent or LaunchDaemon executables.",
+          evidence: "Found privileged helper tool in \(directory.path)."
         )
       }
     }
@@ -140,7 +144,9 @@ struct BackgroundItemScanner: BackgroundItemScanning {
       label: label,
       path: path,
       executable: executable,
-      isPotentiallyStale: isStale
+      isPotentiallyStale: isStale,
+      staleReason: isStale ? "ServiceManagement record points to a path that was not found: \(stalePath)." : nil,
+      evidence: "Parsed ServiceManagement record from sfltool dumpbtm."
     )
   }
 
