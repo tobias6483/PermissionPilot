@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Native SwiftUI macOS app | Implemented | SwiftPM executable app scaffold. |
 | Installed app inventory | Partial | Scans `/Applications` and `~/Applications` with bundle metadata where available. |
-| TCC permission overview | Planned | Current permission states are `unknown`; direct TCC scanning needs a reviewed implementation. |
+| TCC permission overview | Partial | Best-effort local TCC record matching for known services when macOS allows database access. |
 | Sensitivity labels | Implemented | High, medium, and low categories. |
 | Explain mode | Implemented | Educational descriptions for each permission. |
 | System Settings deep links | Implemented | Opens relevant Privacy & Security panes when macOS accepts the URL. |
@@ -15,7 +15,7 @@
 | Helper tool detection | Partial | Marks plist executables that no longer exist as potentially stale. |
 | Markdown report export | Implemented | Explicit user action only. |
 | JSON report export | Implemented | Explicit user action only. |
-| No telemetry by default | Implemented | No telemetry code exists. |
+| No telemetry by default | Implemented | No telemetry or networking code exists. |
 
 ## Release Gate For v0.1
 

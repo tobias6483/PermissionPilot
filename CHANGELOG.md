@@ -6,6 +6,7 @@ All notable changes to PermissionPilot will be documented in this file.
 
 - Added initial SwiftUI macOS app scaffold.
 - Added installed app inventory from common Applications folders.
+- Added best-effort user TCC database scanner and permission record matching.
 - Added permission catalog, sensitivity labels, and System Settings links.
 - Added LaunchAgent and LaunchDaemon scanning.
 - Added Markdown and JSON report export with unit tests.

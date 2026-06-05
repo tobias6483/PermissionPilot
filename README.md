@@ -6,9 +6,9 @@ It aims to help people understand which apps have sensitive local permissions, w
 
 ## Status
 
-PermissionPilot has an initial native SwiftUI macOS app scaffold. The current app can inventory installed apps, show an educational permission catalog, label sensitivity, scan LaunchAgents and LaunchDaemons, open relevant System Settings panes, and export local Markdown/JSON reports.
+PermissionPilot has an initial native SwiftUI macOS app scaffold. The current app can inventory installed apps, show an educational permission catalog, label sensitivity, scan LaunchAgents and LaunchDaemons, open relevant System Settings panes, perform best-effort local TCC record matching, and export local Markdown/JSON reports.
 
-Direct TCC permission-state detection is not implemented yet. Current app permission rows show `unknown` until the scanner is expanded in a later milestone.
+TCC permission-state detection is intentionally conservative. If macOS does not allow the app to read the user's TCC database, or if no matching record exists, PermissionPilot shows `unknown` with evidence instead of guessing.
 
 ## Planned MVP
 

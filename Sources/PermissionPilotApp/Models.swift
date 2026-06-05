@@ -44,7 +44,7 @@ struct InstalledApp: Identifiable, Codable, Hashable {
 
   var highestSensitivity: Sensitivity {
     permissions
-      .filter { $0.status != .denied }
+      .filter { $0.status == .granted }
       .map(\.permission.sensitivity)
       .sorted()
       .first ?? .low
@@ -71,4 +71,3 @@ struct PrivacyReport: Codable {
   let apps: [InstalledApp]
   let backgroundItems: [BackgroundItem]
 }
-

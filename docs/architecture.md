@@ -7,6 +7,7 @@ PermissionPilot currently ships as a Swift Package Manager executable target nam
 - `DashboardView`: SwiftUI navigation, app list, permission explanations, background item summary, and export actions.
 - `DashboardStore`: Main actor state container for scan results.
 - `AppInventoryScanner`: Finds `.app` bundles in `/Applications` and `~/Applications`.
+- `TCCDatabaseScanner`: Performs best-effort reads of the user's TCC database through `/usr/bin/sqlite3` and maps known services to permissions.
 - `BackgroundItemScanner`: Reads LaunchAgent and LaunchDaemon plists from common locations.
 - `PermissionCatalog`: Educational permission definitions, sensitivity labels, and System Settings URLs.
 - `ReportExporter`: Markdown and JSON report generation.
@@ -21,7 +22,7 @@ PermissionPilot currently ships as a Swift Package Manager executable target nam
 
 ## Current Limitations
 
-- TCC permission states are not directly read yet.
+- TCC permission states depend on macOS allowing local database access.
 - Login Items scanning is not implemented yet.
 - The current app is distributed as a SwiftPM executable during development, not a signed `.app` bundle.
 

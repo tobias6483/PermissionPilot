@@ -34,6 +34,7 @@ The app currently includes:
 
 - Native SwiftUI dashboard.
 - Installed app inventory from `/Applications` and `~/Applications`.
+- Best-effort user TCC database record matching through `/usr/bin/sqlite3`.
 - Educational permission catalog and sensitivity labels.
 - System Settings links for known Privacy & Security panes.
 - LaunchAgent and LaunchDaemon scanning from common system and user locations.
@@ -47,4 +48,4 @@ The app currently includes:
 
 macOS intentionally restricts access to some privacy databases and permission states. PermissionPilot should explain limitations instead of pretending to see more than the OS allows.
 
-Current permission status values are `unknown` until direct TCC scanning is implemented and reviewed.
+Current TCC scanning reads the user's `~/Library/Application Support/com.apple.TCC/TCC.db` only when macOS allows it. Without permission, values remain `unknown` and the app explains that the database was not readable.

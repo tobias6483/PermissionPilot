@@ -15,6 +15,7 @@ PermissionPilot is intended to be local-first privacy software.
 The app may surface sensitive local state, including:
 
 - Apps with Screen Recording, Accessibility, Full Disk Access, Camera, Microphone, Location, or Automation permissions.
+- User TCC database records when macOS allows local inspection.
 - LaunchAgents and LaunchDaemons.
 - Login Items and background services.
 - Helper tools and privileged service metadata.
@@ -23,4 +24,3 @@ The app may surface sensitive local state, including:
 ## Future Changes
 
 Any future analytics, update checks, remote integrations, background agents, helper tools, or network features must be documented before release and reviewed for privacy impact.
-

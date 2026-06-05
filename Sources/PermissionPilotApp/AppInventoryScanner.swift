@@ -7,8 +7,10 @@ protocol AppInventoryScanning {
 
 struct AppInventoryScanner: AppInventoryScanning {
   var fileManager: FileManager = .default
+  var tccScanner: TCCDatabaseScanning = TCCDatabaseScanner()
 
   func scanInstalledApps() -> [InstalledApp] {
+    let tccScan = tccScanner.scan()
     let roots = [
       "/Applications",
       fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Applications").path
@@ -33,11 +35,11 @@ struct AppInventoryScanner: AppInventoryScanning {
     }
 
     return appURLs
-      .map(makeInstalledApp)
+      .map { makeInstalledApp(from: $0, tccScan: tccScan) }
       .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
   }
 
-  private func makeInstalledApp(from url: URL) -> InstalledApp {
+  private func makeInstalledApp(from url: URL, tccScan: TCCScanResult) -> InstalledApp {
     let bundle = Bundle(url: url)
     let displayName = bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
     let bundleName = bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String
@@ -49,7 +51,7 @@ struct AppInventoryScanner: AppInventoryScanning {
       bundleIdentifier: bundle?.bundleIdentifier,
       path: url.path,
       permissions: PermissionCatalog.all.map {
-        PermissionGrant(permission: $0, status: .unknown, evidence: "TCC status scan is planned for a later milestone.")
+        tccScan.grant(for: $0, bundleIdentifier: bundle?.bundleIdentifier, appPath: url.path)
       }
     )
   }

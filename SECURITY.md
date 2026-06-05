@@ -16,6 +16,7 @@ If private reporting is not available, contact the maintainer through their GitH
 - Exported reports must make it clear what is included.
 - The app should not transmit local permission state by default.
 - Scanners should be transparent about inspected paths and limitations.
+- TCC inspection must remain best-effort and must not bypass macOS protections.
 - Privileged operations should be avoided unless clearly justified and reviewed.
 - Any future helper tool, daemon, or background process requires a dedicated security and privacy review before release.
 
@@ -25,4 +26,3 @@ If private reporting is not available, contact the maintainer through their GitH
 - Reading protected databases without user-granted access.
 - Hiding security-relevant app behavior from the user.
 - Collecting or selling permission data.
-
