@@ -1,0 +1,35 @@
+# Local-only planning notes
+project.md
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode / Swift
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# App artifacts
+*.app
+*.dSYM
+*.ipa
+*.pkg
+*.dmg
+*.xcarchive
+
+# Logs and local config
+*.log
+.env
+.env.*
+!.env.example
+
+# Editor
+.vscode/
+.idea/
+

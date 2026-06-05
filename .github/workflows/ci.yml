@@ -1,0 +1,19 @@
+name: Repository Check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  repo-check:
+    name: Repository Foundation Check
+    runs-on: macos-15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run repository check
+        run: bash scripts/check-repo.sh
+

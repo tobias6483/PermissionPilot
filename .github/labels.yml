@@ -1,0 +1,40 @@
+- name: bug
+  color: "d73a4a"
+  description: Something is not working.
+- name: enhancement
+  color: "a2eeef"
+  description: New feature or improvement.
+- name: documentation
+  color: "0075ca"
+  description: Documentation changes.
+- name: security
+  color: "b60205"
+  description: Security-sensitive work.
+- name: privacy
+  color: "5319e7"
+  description: Privacy-sensitive work.
+- name: needs-triage
+  color: "ededed"
+  description: Needs maintainer triage.
+- name: area:docs
+  color: "cfd3d7"
+  description: Documentation area.
+- name: area:release
+  color: "cfd3d7"
+  description: Release process or artifacts.
+- name: area:scanner
+  color: "cfd3d7"
+  description: Local scanner behavior.
+- name: area:permissions
+  color: "cfd3d7"
+  description: Permission inventory and explanations.
+- name: area:export
+  color: "cfd3d7"
+  description: Report export behavior.
+- name: privacy-review
+  color: "5319e7"
+  description: Needs privacy review.
+- name: hardware-qa
+  color: "fbca04"
+  description: Needs testing on real macOS hardware.
+

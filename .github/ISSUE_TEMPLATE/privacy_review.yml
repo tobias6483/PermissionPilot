@@ -1,0 +1,39 @@
+name: Privacy review
+description: Request review for permission-sensitive behavior.
+title: "[Privacy Review]: "
+labels: ["privacy", "privacy-review", "needs-triage"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - TCC permission data
+        - App inventory
+        - File-system scanning
+        - LaunchAgents or LaunchDaemons
+        - Login Items
+        - Helper tools
+        - Exported reports
+        - Networking or analytics
+        - Privileged operations
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Data involved
+      description: Describe data categories without posting private local data.
+    validations:
+      required: true
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Mitigations and user controls
+
