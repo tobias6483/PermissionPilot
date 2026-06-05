@@ -112,6 +112,38 @@ enum BackgroundItemKind: String, Codable, CaseIterable {
   case privilegedHelperTool = "Privileged Helper Tool"
 }
 
+enum BackgroundItemKindFilter: String, CaseIterable, Identifiable {
+  case any = "Any"
+  case launchAgent = "LaunchAgent"
+  case launchDaemon = "LaunchDaemon"
+  case loginItem = "Login Item"
+  case backgroundTask = "Background Task"
+  case serviceManagementItem = "Service"
+  case privilegedHelperTool = "Helper"
+
+  var id: String { rawValue }
+
+  var kind: BackgroundItemKind? {
+    switch self {
+    case .any: nil
+    case .launchAgent: .launchAgent
+    case .launchDaemon: .launchDaemon
+    case .loginItem: .loginItem
+    case .backgroundTask: .backgroundTask
+    case .serviceManagementItem: .serviceManagementItem
+    case .privilegedHelperTool: .privilegedHelperTool
+    }
+  }
+}
+
+enum BackgroundItemSortOrder: String, CaseIterable, Identifiable {
+  case label = "Label"
+  case kind = "Kind"
+  case stale = "Stale"
+
+  var id: String { rawValue }
+}
+
 struct BackgroundItem: Identifiable, Codable, Hashable {
   let id: String
   let kind: BackgroundItemKind
@@ -225,5 +257,67 @@ struct AppListFilter: Equatable {
 extension InstalledApp {
   func grant(for permission: PermissionDefinition) -> PermissionGrant? {
     permissions.first { $0.permission.id == permission.id }
+  }
+}
+
+struct BackgroundItemListFilter: Equatable {
+  var searchText = ""
+  var kind: BackgroundItemKindFilter = .any
+  var staleOnly = false
+  var sortOrder: BackgroundItemSortOrder = .label
+
+  func apply(to items: [BackgroundItem]) -> [BackgroundItem] {
+    items
+      .filter(matchesSearch)
+      .filter(matchesKind)
+      .filter(matchesStale)
+      .sorted(by: areInIncreasingOrder)
+  }
+
+  private func matchesSearch(_ item: BackgroundItem) -> Bool {
+    let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !query.isEmpty else {
+      return true
+    }
+
+    return [
+      item.label,
+      item.kind.rawValue,
+      item.path,
+      item.executable ?? ""
+    ].contains { value in
+      value.localizedCaseInsensitiveContains(query)
+    }
+  }
+
+  private func matchesKind(_ item: BackgroundItem) -> Bool {
+    guard let requiredKind = kind.kind else {
+      return true
+    }
+
+    return item.kind == requiredKind
+  }
+
+  private func matchesStale(_ item: BackgroundItem) -> Bool {
+    !staleOnly || item.isPotentiallyStale
+  }
+
+  private func areInIncreasingOrder(_ lhs: BackgroundItem, _ rhs: BackgroundItem) -> Bool {
+    switch sortOrder {
+    case .label:
+      return compareLabels(lhs, rhs)
+    case .kind:
+      return lhs.kind.rawValue == rhs.kind.rawValue
+        ? compareLabels(lhs, rhs)
+        : lhs.kind.rawValue.localizedCaseInsensitiveCompare(rhs.kind.rawValue) == .orderedAscending
+    case .stale:
+      return lhs.isPotentiallyStale == rhs.isPotentiallyStale
+        ? compareLabels(lhs, rhs)
+        : lhs.isPotentiallyStale && !rhs.isPotentiallyStale
+    }
+  }
+
+  private func compareLabels(_ lhs: BackgroundItem, _ rhs: BackgroundItem) -> Bool {
+    lhs.label.localizedCaseInsensitiveCompare(rhs.label) == .orderedAscending
   }
 }

@@ -88,4 +88,50 @@ final class BackgroundItemScannerTests: XCTestCase {
     XCTAssertEqual(items[0].path, "/Users/example/Library/LaunchAgents/com.rogueamoeba.loopbackd.plist")
     XCTAssertEqual(items[0].executable, "/Users/example/Library/Application Support/Loopback/Loopback.app/Contents/MacOS/Loopback")
   }
+
+  func testBackgroundItemListFilterCombinesSearchKindAndStaleOnly() {
+    let items = [
+      makeItem(label: "Alpha Agent", kind: .launchAgent, path: "/Library/LaunchAgents/com.example.alpha.plist", isPotentiallyStale: false),
+      makeItem(label: "Beta Helper", kind: .privilegedHelperTool, path: "/Library/PrivilegedHelperTools/com.example.beta", isPotentiallyStale: true),
+      makeItem(label: "Gamma Helper", kind: .privilegedHelperTool, path: "/Library/PrivilegedHelperTools/com.example.gamma", isPotentiallyStale: false)
+    ]
+
+    let filter = BackgroundItemListFilter(
+      searchText: "helper",
+      kind: .privilegedHelperTool,
+      staleOnly: true,
+      sortOrder: .label
+    )
+
+    XCTAssertEqual(filter.apply(to: items).map(\.label), ["Beta Helper"])
+  }
+
+  func testBackgroundItemListFilterSortsStaleItemsFirst() {
+    let items = [
+      makeItem(label: "Alpha", isPotentiallyStale: false),
+      makeItem(label: "Beta", isPotentiallyStale: true),
+      makeItem(label: "Gamma", isPotentiallyStale: true)
+    ]
+
+    let filter = BackgroundItemListFilter(sortOrder: .stale)
+
+    XCTAssertEqual(filter.apply(to: items).map(\.label), ["Beta", "Gamma", "Alpha"])
+  }
+
+  private func makeItem(
+    label: String,
+    kind: BackgroundItemKind = .launchAgent,
+    path: String? = nil,
+    executable: String? = nil,
+    isPotentiallyStale: Bool
+  ) -> BackgroundItem {
+    BackgroundItem(
+      id: label,
+      kind: kind,
+      label: label,
+      path: path ?? "/Library/LaunchAgents/\(label).plist",
+      executable: executable,
+      isPotentiallyStale: isPotentiallyStale
+    )
+  }
 }
