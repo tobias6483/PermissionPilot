@@ -9,6 +9,7 @@
 | App signing identity | Partial | Uses `codesign` to inspect signature status, Team ID, signing identifier, and authority chain. |
 | TCC permission overview | Partial | Best-effort local TCC record matching for known services when macOS allows database access. |
 | Sensitivity labels | Implemented | High, medium, and low categories. |
+| App list filtering and sorting | Implemented | Search by app metadata, filter by selected permission status and signing state, and sort by name, sensitivity, status, or signature. |
 | Explain mode | Implemented | Educational descriptions for each permission. |
 | System Settings deep links | Implemented | Opens relevant Privacy & Security panes when macOS accepts the URL. |
 | LaunchAgents and LaunchDaemons scanner | Partial | Scans common user and system locations plus relevant `sfltool dumpbtm` records. |

@@ -4,6 +4,7 @@ All notable changes to PermissionPilot will be documented in this file.
 
 ## Unreleased
 
+- Added dashboard app search, permission status filters, signature filters, and app sorting.
 - Expanded privacy and security docs to match current scanner, export, and bundle behavior.
 - Added a local SwiftPM-based `.app` bundle build script and documented bundle QA.
 
