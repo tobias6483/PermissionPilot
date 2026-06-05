@@ -22,6 +22,18 @@ Run:
 swift run PermissionPilot
 ```
 
+Build a local `.app` bundle:
+
+```sh
+bash scripts/build-app-bundle.sh
+```
+
+Open the generated bundle:
+
+```sh
+open .build/app/PermissionPilot.app
+```
+
 Repository check:
 
 ```sh
@@ -46,6 +58,29 @@ The app currently includes:
 ## Local Planning
 
 `project.md` is intentionally ignored by git and should not be referenced by public docs.
+
+## App Bundle Workflow
+
+`scripts/build-app-bundle.sh` builds the SwiftPM executable and wraps it as `.build/app/PermissionPilot.app`.
+
+The script generates `Contents/Info.plist`, copies the compiled executable into `Contents/MacOS`, and validates the plist with `plutil`. By default the bundle is unsigned and intended for local development or release workflow rehearsal.
+
+Optional environment variables:
+
+- `CONFIGURATION`: `release` by default. Set to `debug` for a debug bundle.
+- `BUNDLE_ID`: defaults to `io.github.tobias6483.PermissionPilot`.
+- `VERSION`: defaults to `0.1.0`.
+- `BUILD_NUMBER`: defaults to `1`.
+- `OUTPUT_ROOT`: defaults to `.build/app`.
+- `CODESIGN_IDENTITY`: when set, the script signs and verifies the bundle with hardened runtime enabled.
+
+Manual QA for bundle changes:
+
+- Build the bundle with `bash scripts/build-app-bundle.sh`.
+- Open `.build/app/PermissionPilot.app`.
+- Confirm the dashboard loads and refreshes.
+- Confirm System Settings links still open the expected Privacy & Security panes.
+- Confirm exported Markdown and JSON reports can still be generated.
 
 ## Platform Caveats
 
