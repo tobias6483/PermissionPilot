@@ -4,18 +4,18 @@
 
 | Requirement | Status | Notes |
 | --- | --- | --- |
-| Native SwiftUI macOS app | Planned | First implementation milestone. |
-| Installed app inventory | Planned | Should include bundle metadata where available. |
-| TCC permission overview | Planned | Must respect macOS access limits. |
-| Sensitivity labels | Planned | High, medium, and low categories. |
-| Explain mode | Planned | Educational descriptions for each permission. |
-| System Settings deep links | Planned | Open relevant Privacy & Security panes. |
-| LaunchAgents and LaunchDaemons scanner | Planned | Include user and system locations. |
+| Native SwiftUI macOS app | Implemented | SwiftPM executable app scaffold. |
+| Installed app inventory | Partial | Scans `/Applications` and `~/Applications` with bundle metadata where available. |
+| TCC permission overview | Planned | Current permission states are `unknown`; direct TCC scanning needs a reviewed implementation. |
+| Sensitivity labels | Implemented | High, medium, and low categories. |
+| Explain mode | Implemented | Educational descriptions for each permission. |
+| System Settings deep links | Implemented | Opens relevant Privacy & Security panes when macOS accepts the URL. |
+| LaunchAgents and LaunchDaemons scanner | Partial | Scans common user and system locations. |
 | Login Items scanner | Planned | Depends on supported macOS APIs. |
-| Helper tool detection | Planned | Needs careful false-positive handling. |
-| Markdown report export | Planned | Explicit user action only. |
-| JSON report export | Planned | Explicit user action only. |
-| No telemetry by default | Planned | Privacy principle. |
+| Helper tool detection | Partial | Marks plist executables that no longer exist as potentially stale. |
+| Markdown report export | Implemented | Explicit user action only. |
+| JSON report export | Implemented | Explicit user action only. |
+| No telemetry by default | Implemented | No telemetry code exists. |
 
 ## Release Gate For v0.1
 
@@ -24,4 +24,3 @@
 - User can open relevant System Settings panes.
 - Exported reports are clearly labeled.
 - Privacy and security docs are updated with actual behavior.
-

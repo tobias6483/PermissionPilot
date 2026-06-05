@@ -4,6 +4,7 @@ set -euo pipefail
 required_files=(
   "README.md"
   "LICENSE"
+  "Package.swift"
   "CONTRIBUTING.md"
   "SECURITY.md"
   "PRIVACY.md"
@@ -20,6 +21,8 @@ required_files=(
   ".github/ISSUE_TEMPLATE/privacy_review.yml"
   ".github/ISSUE_TEMPLATE/config.yml"
   ".github/workflows/ci.yml"
+  "Sources/PermissionPilotApp/PermissionPilotApp.swift"
+  "Tests/PermissionPilotTests/ReportExporterTests.swift"
 )
 
 for file in "${required_files[@]}"; do
@@ -35,4 +38,3 @@ if ! git check-ignore -q project.md; then
 fi
 
 echo "Repository foundation checks passed."
-
