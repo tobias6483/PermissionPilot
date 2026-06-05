@@ -34,6 +34,7 @@ The app currently includes:
 
 - Native SwiftUI dashboard.
 - Installed app inventory from `/Applications` and `~/Applications`.
+- Code signing identity inspection through `/usr/bin/codesign`.
 - Best-effort user TCC database record matching through `/usr/bin/sqlite3`.
 - Educational permission catalog and sensitivity labels.
 - System Settings links for known Privacy & Security panes.

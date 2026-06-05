@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | Native SwiftUI macOS app | Implemented | SwiftPM executable app scaffold. |
 | Installed app inventory | Partial | Scans `/Applications` and `~/Applications` with bundle metadata where available. |
+| App signing identity | Partial | Uses `codesign` to inspect signature status, Team ID, signing identifier, and authority chain. |
 | TCC permission overview | Partial | Best-effort local TCC record matching for known services when macOS allows database access. |
 | Sensitivity labels | Implemented | High, medium, and low categories. |
 | Explain mode | Implemented | Educational descriptions for each permission. |

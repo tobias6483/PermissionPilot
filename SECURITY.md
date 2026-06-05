@@ -16,6 +16,7 @@ If private reporting is not available, contact the maintainer through their GitH
 - Exported reports must make it clear what is included.
 - The app should not transmit local permission state by default.
 - Scanners should be transparent about inspected paths and limitations.
+- Code signing metadata helps identify app origin, but it is not a complete trust or safety verdict.
 - TCC inspection must remain best-effort and must not bypass macOS protections.
 - Login item and background task inspection must remain read-only and transparent about source data.
 - Privileged helper tool checks should be conservative; an unreferenced helper is a review signal, not proof of compromise.

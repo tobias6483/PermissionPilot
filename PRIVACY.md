@@ -15,6 +15,7 @@ PermissionPilot is intended to be local-first privacy software.
 The app may surface sensitive local state, including:
 
 - Apps with Screen Recording, Accessibility, Full Disk Access, Camera, Microphone, Location, or Automation permissions.
+- App code signing identity metadata such as Team ID, signing identifier, and authority chain.
 - User TCC database records when macOS allows local inspection.
 - LaunchAgents and LaunchDaemons.
 - Login Items, ServiceManagement records, and background services exposed by `sfltool dumpbtm`.

@@ -8,6 +8,7 @@ protocol AppInventoryScanning {
 struct AppInventoryScanner: AppInventoryScanning {
   var fileManager: FileManager = .default
   var tccScanner: TCCDatabaseScanning = TCCDatabaseScanner()
+  var codeSignatureScanner: CodeSignatureScanning = CodeSignatureScanner()
 
   func scanInstalledApps() -> [InstalledApp] {
     let tccScan = tccScanner.scan()
@@ -50,6 +51,7 @@ struct AppInventoryScanner: AppInventoryScanning {
       name: name,
       bundleIdentifier: bundle?.bundleIdentifier,
       path: url.path,
+      signingInfo: codeSignatureScanner.inspectApp(at: url),
       permissions: PermissionCatalog.all.map {
         tccScan.grant(for: $0, bundleIdentifier: bundle?.bundleIdentifier, appPath: url.path)
       }

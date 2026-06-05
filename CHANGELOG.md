@@ -4,6 +4,7 @@ All notable changes to PermissionPilot will be documented in this file.
 
 ## Unreleased
 
+- Added code signing identity inspection for installed apps.
 - Added initial SwiftUI macOS app scaffold.
 - Added installed app inventory from common Applications folders.
 - Added best-effort user TCC database scanner and permission record matching.
