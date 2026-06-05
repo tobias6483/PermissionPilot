@@ -3,6 +3,19 @@ import XCTest
 @testable import PermissionPilotApp
 
 final class ReportExporterTests: XCTestCase {
+  func testDefaultFileNamesIncludeScopeFormatAndTimestamp() {
+    let generatedAt = Date(timeIntervalSince1970: 1_704_067_200)
+
+    XCTAssertEqual(
+      ReportExporter.defaultFileName(scope: .full, format: .markdown, generatedAt: generatedAt),
+      "permissionpilot-full-report-20240101-000000.md"
+    )
+    XCTAssertEqual(
+      ReportExporter.defaultFileName(scope: .filtered, format: .json, generatedAt: generatedAt),
+      "permissionpilot-filtered-report-20240101-000000.json"
+    )
+  }
+
   func testMarkdownIncludesAppsAndBackgroundItems() {
     let report = PrivacyReport(
       generatedAt: Date(timeIntervalSince1970: 0),

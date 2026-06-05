@@ -232,16 +232,17 @@ struct DashboardView: View {
   }
 
   private func exportMarkdown(scope: ReportScope) {
+    let report = report(for: scope)
     let panel = NSSavePanel()
     panel.allowedContentTypes = [.plainText]
-    panel.nameFieldStringValue = scope == .filtered ? "permissionpilot-filtered-report.md" : "permissionpilot-report.md"
+    panel.nameFieldStringValue = ReportExporter.defaultFileName(scope: scope, format: .markdown, generatedAt: report.generatedAt)
 
     guard panel.runModal() == .OK, let url = panel.url else {
       return
     }
 
     do {
-      try ReportExporter.markdown(report: report(for: scope)).write(to: url, atomically: true, encoding: .utf8)
+      try ReportExporter.markdown(report: report).write(to: url, atomically: true, encoding: .utf8)
       exportMessage = "Saved Markdown report to \(url.path)."
     } catch {
       exportMessage = "Could not save Markdown report: \(error.localizedDescription)"
@@ -249,16 +250,17 @@ struct DashboardView: View {
   }
 
   private func exportJSON(scope: ReportScope) {
+    let report = report(for: scope)
     let panel = NSSavePanel()
     panel.allowedContentTypes = [.json]
-    panel.nameFieldStringValue = scope == .filtered ? "permissionpilot-filtered-report.json" : "permissionpilot-report.json"
+    panel.nameFieldStringValue = ReportExporter.defaultFileName(scope: scope, format: .json, generatedAt: report.generatedAt)
 
     guard panel.runModal() == .OK, let url = panel.url else {
       return
     }
 
     do {
-      try ReportExporter.json(report: report(for: scope)).write(to: url)
+      try ReportExporter.json(report: report).write(to: url)
       exportMessage = "Saved JSON report to \(url.path)."
     } catch {
       exportMessage = "Could not save JSON report: \(error.localizedDescription)"

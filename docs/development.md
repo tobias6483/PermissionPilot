@@ -34,6 +34,12 @@ Open the generated bundle:
 open .build/app/PermissionPilot.app
 ```
 
+Run a local app bundle smoke test:
+
+```sh
+bash scripts/smoke-test-app-bundle.sh
+```
+
 Repository check:
 
 ```sh
@@ -81,12 +87,13 @@ Optional environment variables:
 Manual QA for bundle changes:
 
 - Build the bundle with `bash scripts/build-app-bundle.sh`.
+- Run `bash scripts/smoke-test-app-bundle.sh` to launch the bundle, trigger `Refresh Scan`, check for fresh crash reports, and quit the app.
 - Open `.build/app/PermissionPilot.app`.
 - Confirm the dashboard loads and refreshes.
 - Confirm System Settings links still open the expected Privacy & Security panes.
 - In each permission detail, mark the System Settings link as `Tested working` or `Tested failed` while checking links. This status is runtime-only UI state and is not persisted.
 - Confirm first-run guidance appears when TCC data is unreadable or the scan has only unknown permission states.
-- Confirm full and filtered Markdown and JSON reports can still be generated.
+- Confirm full and filtered Markdown and JSON reports can still be generated. Default save names include full/filtered scope and a UTC timestamp, for example `permissionpilot-full-report-20240101-000000.md`.
 
 ## Platform Caveats
 

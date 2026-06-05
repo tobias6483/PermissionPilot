@@ -16,6 +16,7 @@ required_files=(
   ".gitignore"
   ".editorconfig"
   "scripts/build-app-bundle.sh"
+  "scripts/smoke-test-app-bundle.sh"
   ".github/pull_request_template.md"
   ".github/ISSUE_TEMPLATE/bug_report.yml"
   ".github/ISSUE_TEMPLATE/feature_request.yml"
