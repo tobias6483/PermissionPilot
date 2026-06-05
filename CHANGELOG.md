@@ -4,6 +4,7 @@ All notable changes to PermissionPilot will be documented in this file.
 
 ## Unreleased
 
+- Added permission status summaries in the sidebar and selected permission detail view.
 - Added background item search, kind filters, stale-only filtering, and sorting.
 - Added dashboard app search, permission status filters, signature filters, and app sorting.
 - Expanded privacy and security docs to match current scanner, export, and bundle behavior.

@@ -70,6 +70,44 @@ struct PermissionGrant: Identifiable, Codable, Hashable {
   let evidence: String
 }
 
+struct PermissionStatusSummary: Equatable {
+  let permission: PermissionDefinition
+  let granted: Int
+  let denied: Int
+  let unknown: Int
+
+  var total: Int {
+    granted + denied + unknown
+  }
+
+  var hasKnownState: Bool {
+    granted > 0 || denied > 0
+  }
+
+  init(permission: PermissionDefinition, apps: [InstalledApp]) {
+    self.permission = permission
+
+    var granted = 0
+    var denied = 0
+    var unknown = 0
+
+    for app in apps {
+      switch app.grant(for: permission)?.status ?? .unknown {
+      case .granted:
+        granted += 1
+      case .denied:
+        denied += 1
+      case .unknown:
+        unknown += 1
+      }
+    }
+
+    self.granted = granted
+    self.denied = denied
+    self.unknown = unknown
+  }
+}
+
 struct CodeSignatureInfo: Codable, Hashable {
   let isSigned: Bool
   let teamIdentifier: String?

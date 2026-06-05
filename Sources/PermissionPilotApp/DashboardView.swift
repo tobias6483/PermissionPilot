@@ -50,7 +50,11 @@ struct DashboardView: View {
     List(selection: $store.selectedPermission) {
       Section("Permissions") {
         ForEach(PermissionCatalog.all) { permission in
-          Label(permission.name, systemImage: symbol(for: permission))
+          PermissionSidebarRow(
+            permission: permission,
+            summary: PermissionStatusSummary(permission: permission, apps: store.apps),
+            symbol: symbol(for: permission)
+          )
             .tag(Optional(permission))
         }
       }
@@ -95,7 +99,10 @@ struct DashboardView: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
         if let permission = store.selectedPermission {
-          PermissionExplanationCard(permission: permission)
+          PermissionExplanationCard(
+            permission: permission,
+            summary: PermissionStatusSummary(permission: permission, apps: store.apps)
+          )
         }
 
         if let selectedApp {
@@ -177,6 +184,20 @@ struct DashboardView: View {
       exportMessage = "Saved JSON report to \(url.path)."
     } catch {
       exportMessage = "Could not save JSON report: \(error.localizedDescription)"
+    }
+  }
+}
+
+private struct PermissionSidebarRow: View {
+  let permission: PermissionDefinition
+  let summary: PermissionStatusSummary
+  let symbol: String
+
+  var body: some View {
+    HStack(spacing: 8) {
+      Label(permission.name, systemImage: symbol)
+      Spacer()
+      StatusCountStrip(summary: summary, compact: true)
     }
   }
 }
@@ -268,6 +289,7 @@ private struct AppListRow: View {
 
 private struct PermissionExplanationCard: View {
   let permission: PermissionDefinition
+  let summary: PermissionStatusSummary
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
@@ -280,6 +302,7 @@ private struct PermissionExplanationCard: View {
       ExplanationRow(title: "Why this matters", text: permission.whyItMatters)
       ExplanationRow(title: "What an app can do", text: permission.capability)
       ExplanationRow(title: "How to revoke it", text: permission.revokeHint)
+      PermissionStatusSummaryView(summary: summary)
 
       Button {
         SystemSettingsLinker.open(permission)
@@ -288,6 +311,78 @@ private struct PermissionExplanationCard: View {
       }
       .buttonStyle(.borderedProminent)
     }
+  }
+}
+
+private struct PermissionStatusSummaryView: View {
+  let summary: PermissionStatusSummary
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Current Scan")
+        .font(.headline)
+
+      HStack(spacing: 10) {
+        StatusCountBadge(title: "Granted", count: summary.granted, color: .green)
+        StatusCountBadge(title: "Denied", count: summary.denied, color: .orange)
+        StatusCountBadge(title: "Unknown", count: summary.unknown, color: .secondary)
+      }
+
+      Text(summary.hasKnownState ? "\(summary.total) apps scanned for this permission." : "No known grants or denials were found for this permission in the current scan.")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+  }
+}
+
+private struct StatusCountStrip: View {
+  let summary: PermissionStatusSummary
+  let compact: Bool
+
+  var body: some View {
+    HStack(spacing: compact ? 4 : 8) {
+      StatusCountPill(count: summary.granted, color: .green)
+      StatusCountPill(count: summary.denied, color: .orange)
+      StatusCountPill(count: summary.unknown, color: .secondary)
+    }
+    .accessibilityLabel("\(summary.granted) granted, \(summary.denied) denied, \(summary.unknown) unknown")
+  }
+}
+
+private struct StatusCountPill: View {
+  let count: Int
+  let color: Color
+
+  var body: some View {
+    Text("\(count)")
+      .font(.caption2.weight(.semibold))
+      .monospacedDigit()
+      .foregroundStyle(color)
+      .frame(minWidth: 18)
+      .padding(.horizontal, 5)
+      .padding(.vertical, 2)
+      .background(color.opacity(0.12), in: Capsule())
+  }
+}
+
+private struct StatusCountBadge: View {
+  let title: String
+  let count: Int
+  let color: Color
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(title)
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+      Text("\(count)")
+        .font(.title3.weight(.semibold))
+        .monospacedDigit()
+        .foregroundStyle(color)
+    }
+    .frame(width: 96, alignment: .leading)
+    .padding(10)
+    .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
   }
 }
 
