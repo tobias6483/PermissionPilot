@@ -5,6 +5,10 @@ struct DashboardView: View {
   @EnvironmentObject private var store: DashboardStore
   @State private var selectedApp: InstalledApp?
   @State private var exportMessage: String?
+  @State private var searchText = ""
+  @State private var permissionStatusFilter: PermissionStatusFilter = .any
+  @State private var signatureFilter: SignatureFilter = .any
+  @State private var sortOrder: AppSortOrder = .name
 
   var body: some View {
     NavigationSplitView {
@@ -61,32 +65,25 @@ struct DashboardView: View {
   }
 
   private var appList: some View {
-    List(selection: $selectedApp) {
-      Section("Installed Apps") {
-        ForEach(filteredApps) { app in
-          VStack(alignment: .leading, spacing: 6) {
-            HStack {
-              Text(app.name)
-                .font(.headline)
-              Spacer()
-              SensitivityBadge(sensitivity: app.highestSensitivity)
+    VStack(spacing: 0) {
+      AppListControls(
+        searchText: $searchText,
+        permissionStatusFilter: $permissionStatusFilter,
+        signatureFilter: $signatureFilter,
+        sortOrder: $sortOrder,
+        resultCount: filteredApps.count
+      )
+
+      List(selection: $selectedApp) {
+        Section("Installed Apps") {
+          if filteredApps.isEmpty {
+            ContentUnavailableView("No Matching Apps", systemImage: "line.3.horizontal.decrease.circle")
+          } else {
+            ForEach(filteredApps) { app in
+              AppListRow(app: app, selectedPermission: store.selectedPermission)
+                .tag(Optional(app))
             }
-
-            Text(app.bundleIdentifier ?? "No bundle identifier")
-              .font(.caption)
-              .foregroundStyle(.secondary)
-
-            Label(app.signingInfo.isSigned ? "Signed" : "Unsigned or unknown", systemImage: app.signingInfo.isSigned ? "checkmark.seal" : "questionmark.diamond")
-              .font(.caption2)
-              .foregroundStyle(app.signingInfo.isSigned ? .green : .orange)
-
-            Text(app.path)
-              .font(.caption2)
-              .foregroundStyle(.tertiary)
-              .lineLimit(1)
           }
-          .padding(.vertical, 4)
-          .tag(Optional(app))
         }
       }
     }
@@ -123,13 +120,13 @@ struct DashboardView: View {
   }
 
   private var filteredApps: [InstalledApp] {
-    guard let selectedPermission = store.selectedPermission else {
-      return store.apps
-    }
-
-    return store.apps.filter { app in
-      app.permissions.contains { $0.permission.id == selectedPermission.id }
-    }
+    AppListFilter(
+      searchText: searchText,
+      permission: store.selectedPermission,
+      permissionStatus: permissionStatusFilter,
+      signature: signatureFilter,
+      sortOrder: sortOrder
+    ).apply(to: store.apps)
   }
 
   private var staleBackgroundItemCount: Int {
@@ -181,6 +178,91 @@ struct DashboardView: View {
     } catch {
       exportMessage = "Could not save JSON report: \(error.localizedDescription)"
     }
+  }
+}
+
+private struct AppListControls: View {
+  @Binding var searchText: String
+  @Binding var permissionStatusFilter: PermissionStatusFilter
+  @Binding var signatureFilter: SignatureFilter
+  @Binding var sortOrder: AppSortOrder
+  let resultCount: Int
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack {
+        TextField("Search apps, bundle IDs, teams, or paths", text: $searchText)
+          .textFieldStyle(.roundedBorder)
+
+        Text("\(resultCount)")
+          .font(.caption.weight(.semibold))
+          .monospacedDigit()
+          .foregroundStyle(.secondary)
+          .frame(minWidth: 34, alignment: .trailing)
+      }
+
+      HStack(spacing: 10) {
+        Picker("Status", selection: $permissionStatusFilter) {
+          ForEach(PermissionStatusFilter.allCases) { filter in
+            Text(filter.rawValue).tag(filter)
+          }
+        }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: 280)
+
+        Picker("Signature", selection: $signatureFilter) {
+          ForEach(SignatureFilter.allCases) { filter in
+            Text(filter.rawValue).tag(filter)
+          }
+        }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: 280)
+
+        Picker("Sort", selection: $sortOrder) {
+          ForEach(AppSortOrder.allCases) { order in
+            Text(order.rawValue).tag(order)
+          }
+        }
+        .frame(width: 150)
+      }
+    }
+    .padding(12)
+    .background(.background)
+  }
+}
+
+private struct AppListRow: View {
+  let app: InstalledApp
+  let selectedPermission: PermissionDefinition?
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack {
+        Text(app.name)
+          .font(.headline)
+        Spacer()
+
+        if let selectedPermission, let grant = app.grant(for: selectedPermission) {
+          StatusBadge(status: grant.status)
+        }
+
+        SensitivityBadge(sensitivity: app.highestSensitivity)
+      }
+
+      Text(app.bundleIdentifier ?? "No bundle identifier")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+
+      Label(app.signingInfo.isSigned ? "Signed" : "Unsigned or unknown", systemImage: app.signingInfo.isSigned ? "checkmark.seal" : "questionmark.diamond")
+        .font(.caption2)
+        .foregroundStyle(app.signingInfo.isSigned ? .green : .orange)
+
+      Text(app.path)
+        .font(.caption2)
+        .foregroundStyle(.tertiary)
+        .lineLimit(1)
+    }
+    .padding(.vertical, 4)
   }
 }
 

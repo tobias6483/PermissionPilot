@@ -16,5 +16,89 @@ final class InstalledAppTests: XCTestCase {
 
     XCTAssertEqual(app.highestSensitivity, .medium)
   }
-}
 
+  func testAppListFilterCombinesPermissionStatusSignatureSearchAndSort() {
+    let screenRecording = PermissionCatalog.all[0]
+    let microphone = PermissionCatalog.all[3]
+    let signed = CodeSignatureInfo(
+      isSigned: true,
+      teamIdentifier: "TEAMID",
+      authorities: ["Developer ID Application"],
+      identifier: "com.example.signed",
+      evidence: "Signed."
+    )
+
+    let apps = [
+      makeApp(
+        name: "Beta Recorder",
+        bundleIdentifier: "com.example.beta",
+        path: "/Applications/Beta Recorder.app",
+        signingInfo: signed,
+        grants: [
+          PermissionGrant(permission: screenRecording, status: .granted, evidence: "Matched."),
+          PermissionGrant(permission: microphone, status: .unknown, evidence: "No record.")
+        ]
+      ),
+      makeApp(
+        name: "Alpha Camera",
+        bundleIdentifier: "com.example.alpha",
+        path: "/Applications/Alpha Camera.app",
+        signingInfo: .unknown,
+        grants: [
+          PermissionGrant(permission: screenRecording, status: .denied, evidence: "Matched."),
+          PermissionGrant(permission: microphone, status: .granted, evidence: "Matched.")
+        ]
+      ),
+      makeApp(
+        name: "Gamma Notes",
+        bundleIdentifier: "com.example.gamma",
+        path: "/Applications/Gamma Notes.app",
+        signingInfo: signed,
+        grants: [
+          PermissionGrant(permission: screenRecording, status: .unknown, evidence: "No record."),
+          PermissionGrant(permission: microphone, status: .unknown, evidence: "No record.")
+        ]
+      )
+    ]
+
+    let filter = AppListFilter(
+      searchText: "example",
+      permission: screenRecording,
+      permissionStatus: .granted,
+      signature: .signed,
+      sortOrder: .name
+    )
+
+    XCTAssertEqual(filter.apply(to: apps).map(\.name), ["Beta Recorder"])
+  }
+
+  func testAppListFilterSortsBySelectedPermissionStatus() {
+    let permission = PermissionCatalog.all[0]
+    let apps = [
+      makeApp(name: "Unknown", grants: [PermissionGrant(permission: permission, status: .unknown, evidence: "No record.")]),
+      makeApp(name: "Granted", grants: [PermissionGrant(permission: permission, status: .granted, evidence: "Matched.")]),
+      makeApp(name: "Denied", grants: [PermissionGrant(permission: permission, status: .denied, evidence: "Matched.")])
+    ]
+
+    let filter = AppListFilter(permission: permission, sortOrder: .permissionStatus)
+
+    XCTAssertEqual(filter.apply(to: apps).map(\.name), ["Granted", "Denied", "Unknown"])
+  }
+
+  private func makeApp(
+    name: String,
+    bundleIdentifier: String? = nil,
+    path: String? = nil,
+    signingInfo: CodeSignatureInfo = .unknown,
+    grants: [PermissionGrant]
+  ) -> InstalledApp {
+    InstalledApp(
+      id: bundleIdentifier ?? name,
+      name: name,
+      bundleIdentifier: bundleIdentifier,
+      path: path ?? "/Applications/\(name).app",
+      signingInfo: signingInfo,
+      permissions: grants
+    )
+  }
+}
