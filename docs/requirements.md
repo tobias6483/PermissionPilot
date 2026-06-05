@@ -25,3 +25,4 @@
 - User can open relevant System Settings panes.
 - Exported reports are clearly labeled.
 - Privacy and security docs are updated with actual behavior.
+- Signed and notarized distribution steps are documented before attaching release artifacts.
