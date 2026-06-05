@@ -11,7 +11,9 @@ All notable changes to PermissionPilot will be documented in this file.
 - Added background item selection and a detail view with stale reasons, evidence, selectable paths, and why-it-matters context.
 - Added conservative app review priority badges and explanations; this is an audit signal, not malware detection.
 - Added full and filtered Markdown/JSON export options with filtered report metadata.
+- Added scoped, UTC-timestamped default filenames for full and filtered report exports.
 - Added report scan summaries to Markdown and JSON exports.
+- Added a local `.app` bundle smoke-test script for launch, refresh, crash-report, and clean-quit checks.
 - Added permission status summaries in the sidebar and selected permission detail view.
 - Added background item search, kind filters, stale-only filtering, and sorting.
 - Added dashboard app search, permission status filters, signature filters, and app sorting.

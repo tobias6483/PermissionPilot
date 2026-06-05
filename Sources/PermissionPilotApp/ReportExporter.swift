@@ -1,6 +1,16 @@
 import Foundation
 
 enum ReportExporter {
+  static func defaultFileName(scope: ReportScope, format: ReportFormat, generatedAt: Date = Date()) -> String {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.dateFormat = "yyyyMMdd-HHmmss"
+
+    let scopePart = scope == .filtered ? "filtered" : "full"
+    return "permissionpilot-\(scopePart)-report-\(formatter.string(from: generatedAt)).\(format.fileExtension)"
+  }
+
   static func markdown(report: PrivacyReport) -> String {
     let formatter = ISO8601DateFormatter()
     let summary = PrivacyReportSummary(report: report)
@@ -90,6 +100,18 @@ enum ReportExporter {
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     encoder.dateEncodingStrategy = .iso8601
     return try encoder.encode(ExportedPrivacyReport(summary: PrivacyReportSummary(report: report), report: report))
+  }
+}
+
+enum ReportFormat {
+  case markdown
+  case json
+
+  var fileExtension: String {
+    switch self {
+    case .markdown: "md"
+    case .json: "json"
+    }
   }
 }
 

@@ -73,11 +73,13 @@ Do not attach release artifacts until signing, notarization, stapling, and verif
 - Run `swift build`.
 - Run `swift test`.
 - Run `bash scripts/build-app-bundle.sh`.
+- Run `bash scripts/smoke-test-app-bundle.sh`.
 - For public release artifacts, rerun the bundle build with `CODESIGN_IDENTITY`.
 - Verify the signed bundle with `codesign` and `spctl`.
 - Notarize, staple, and validate the exact `.app` artifact.
 - Open `.build/app/PermissionPilot.app` and perform bundle manual QA.
 - Perform manual QA on supported macOS versions.
+- Confirm full and filtered Markdown/JSON exports save with scope and UTC timestamp in the default filename.
 - Manually compare app signing identity rows with `codesign -dv --verbose=4 <app>`.
 - Manually compare the app's background item view with `sfltool dumpbtm` and common LaunchAgent/LaunchDaemon directories.
 - Manually review `/Library/PrivilegedHelperTools` helper flags for false positives.
