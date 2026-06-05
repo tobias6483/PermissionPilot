@@ -85,6 +85,40 @@ final class InstalledAppTests: XCTestCase {
     XCTAssertEqual(filter.apply(to: apps).map(\.name), ["Granted", "Denied", "Unknown"])
   }
 
+  func testPermissionStatusSummaryCountsSelectedPermissionStates() {
+    let screenRecording = PermissionCatalog.all[0]
+    let microphone = PermissionCatalog.all[3]
+    let apps = [
+      makeApp(
+        name: "Granted",
+        grants: [
+          PermissionGrant(permission: screenRecording, status: .granted, evidence: "Matched."),
+          PermissionGrant(permission: microphone, status: .unknown, evidence: "No record.")
+        ]
+      ),
+      makeApp(
+        name: "Denied",
+        grants: [PermissionGrant(permission: screenRecording, status: .denied, evidence: "Matched.")]
+      ),
+      makeApp(
+        name: "Unknown",
+        grants: [PermissionGrant(permission: screenRecording, status: .unknown, evidence: "No record.")]
+      ),
+      makeApp(
+        name: "Missing",
+        grants: []
+      )
+    ]
+
+    let summary = PermissionStatusSummary(permission: screenRecording, apps: apps)
+
+    XCTAssertEqual(summary.granted, 1)
+    XCTAssertEqual(summary.denied, 1)
+    XCTAssertEqual(summary.unknown, 2)
+    XCTAssertEqual(summary.total, 4)
+    XCTAssertTrue(summary.hasKnownState)
+  }
+
   private func makeApp(
     name: String,
     bundleIdentifier: String? = nil,
