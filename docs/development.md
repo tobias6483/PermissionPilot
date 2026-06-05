@@ -1,22 +1,46 @@
 # Development
 
-PermissionPilot is currently in repository setup.
+PermissionPilot currently uses Swift Package Manager for the first buildable SwiftUI macOS app slice.
 
-## Current Check
+## Commands
+
+Build:
+
+```sh
+swift build
+```
+
+Test:
+
+```sh
+swift test
+```
+
+Run:
+
+```sh
+swift run PermissionPilot
+```
+
+Repository check:
 
 ```sh
 bash scripts/check-repo.sh
 ```
 
-## Planned App Workflow
+## Current App Workflow
 
-The first implementation milestone should add:
+The app currently includes:
 
-- A native SwiftUI macOS app scaffold.
-- Documented Xcode version.
-- Build command.
-- Unit test command.
-- Manual QA checklist for System Settings deep links and permission visibility.
+- Native SwiftUI dashboard.
+- Installed app inventory from `/Applications` and `~/Applications`.
+- Best-effort user TCC database record matching through `/usr/bin/sqlite3`.
+- Educational permission catalog and sensitivity labels.
+- System Settings links for known Privacy & Security panes.
+- LaunchAgent and LaunchDaemon scanning from common system and user locations.
+- Best-effort login item and background task scanning through `/usr/bin/sfltool dumpbtm`.
+- Privileged helper tool scanning from `/Library/PrivilegedHelperTools`.
+- Markdown and JSON report export.
 
 ## Local Planning
 
@@ -26,3 +50,4 @@ The first implementation milestone should add:
 
 macOS intentionally restricts access to some privacy databases and permission states. PermissionPilot should explain limitations instead of pretending to see more than the OS allows.
 
+Current TCC scanning reads the user's `~/Library/Application Support/com.apple.TCC/TCC.db` only when macOS allows it. Without permission, values remain `unknown` and the app explains that the database was not readable.

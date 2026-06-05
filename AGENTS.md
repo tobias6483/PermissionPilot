@@ -8,7 +8,7 @@ These instructions apply to agents working in this repository and take precedenc
 - Platform target: native macOS app.
 - Planned stack: SwiftUI and Swift.
 - Default branch: `main`.
-- Current state: repository foundation; app scaffold not yet implemented.
+- Current state: SwiftPM-based SwiftUI app scaffold with initial scanners and report export.
 - Local planning notes: `project.md` is local-only and must remain ignored by git.
 
 ## Required Checks
@@ -19,7 +19,12 @@ Run this before reporting setup or documentation changes complete:
 bash scripts/check-repo.sh
 ```
 
-When the SwiftUI app scaffold exists, update this file with the required build and test commands.
+Run this before reporting app code changes complete:
+
+```sh
+swift build
+swift test
+```
 
 ## Workflow
 
@@ -34,4 +39,3 @@ When the SwiftUI app scaffold exists, update this file with the required build a
 PermissionPilot is permission-sensitive software. Any change involving TCC data, app inventories, file-system scanning, background services, helper tools, exports, networking, analytics, or privileged operations needs explicit privacy and security notes in the pull request.
 
 The app should stay local-first unless a future change is deliberately reviewed and documented.
-

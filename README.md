@@ -6,7 +6,9 @@ It aims to help people understand which apps have sensitive local permissions, w
 
 ## Status
 
-PermissionPilot is in early repository setup. The public project currently contains documentation, governance, issue templates, and release planning. The first implementation target is a native SwiftUI macOS app.
+PermissionPilot has an initial native SwiftUI macOS app scaffold. The current app can inventory installed apps, show an educational permission catalog, label sensitivity, scan LaunchAgents, LaunchDaemons, login items, background tasks, and privileged helper tools, open relevant System Settings panes, perform best-effort local TCC record matching, and export local Markdown/JSON reports.
+
+TCC permission-state detection is intentionally conservative. If macOS does not allow the app to read the user's TCC database, or if no matching record exists, PermissionPilot shows `unknown` with evidence instead of guessing.
 
 ## Planned MVP
 
@@ -14,7 +16,7 @@ PermissionPilot is in early repository setup. The public project currently conta
 - Highlight high-sensitivity permissions such as Screen Recording, Accessibility, and Full Disk Access.
 - Explain what each permission can allow an app to do.
 - Link directly to relevant Privacy & Security panes in System Settings.
-- Scan common LaunchAgents, LaunchDaemons, Login Items, and helper-tool locations.
+- Scan common LaunchAgents, LaunchDaemons, Login Items, background tasks, and privileged helper-tool locations.
 - Export local Markdown and JSON privacy reports.
 
 ## Privacy Stance
@@ -33,9 +35,25 @@ These requirements may change during the first implementation phase.
 
 ## Build, Test, And Run
 
-No app scaffold exists yet. The first code milestone will add the SwiftUI project and update this section with exact commands.
+Build the app:
 
-Current repository check:
+```sh
+swift build
+```
+
+Run tests:
+
+```sh
+swift test
+```
+
+Run the app from SwiftPM:
+
+```sh
+swift run PermissionPilot
+```
+
+Run repository checks:
 
 ```sh
 bash scripts/check-repo.sh
@@ -54,4 +72,3 @@ bash scripts/check-repo.sh
 ## License
 
 PermissionPilot is released under the MIT License. See [LICENSE](LICENSE).
-

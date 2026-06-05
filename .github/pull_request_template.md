@@ -18,4 +18,3 @@
 - [ ] No permission-sensitive behavior changed.
 - [ ] TCC, permissions, app inventory, file-system scanning, background services, helper tools, exports, networking, analytics, or privileged operations changed.
 - [ ] Privacy and security docs were updated if needed.
-

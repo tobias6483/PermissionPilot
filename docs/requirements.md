@@ -4,18 +4,18 @@
 
 | Requirement | Status | Notes |
 | --- | --- | --- |
-| Native SwiftUI macOS app | Planned | First implementation milestone. |
-| Installed app inventory | Planned | Should include bundle metadata where available. |
-| TCC permission overview | Planned | Must respect macOS access limits. |
-| Sensitivity labels | Planned | High, medium, and low categories. |
-| Explain mode | Planned | Educational descriptions for each permission. |
-| System Settings deep links | Planned | Open relevant Privacy & Security panes. |
-| LaunchAgents and LaunchDaemons scanner | Planned | Include user and system locations. |
-| Login Items scanner | Planned | Depends on supported macOS APIs. |
-| Helper tool detection | Planned | Needs careful false-positive handling. |
-| Markdown report export | Planned | Explicit user action only. |
-| JSON report export | Planned | Explicit user action only. |
-| No telemetry by default | Planned | Privacy principle. |
+| Native SwiftUI macOS app | Implemented | SwiftPM executable app scaffold. |
+| Installed app inventory | Partial | Scans `/Applications` and `~/Applications` with bundle metadata where available. |
+| TCC permission overview | Partial | Best-effort local TCC record matching for known services when macOS allows database access. |
+| Sensitivity labels | Implemented | High, medium, and low categories. |
+| Explain mode | Implemented | Educational descriptions for each permission. |
+| System Settings deep links | Implemented | Opens relevant Privacy & Security panes when macOS accepts the URL. |
+| LaunchAgents and LaunchDaemons scanner | Partial | Scans common user and system locations plus relevant `sfltool dumpbtm` records. |
+| Login Items scanner | Partial | Parses best-effort `sfltool dumpbtm` output for login items and background tasks. |
+| Helper tool detection | Partial | Scans `/Library/PrivilegedHelperTools` and marks helpers without a LaunchAgent/LaunchDaemon executable reference as potentially stale. |
+| Markdown report export | Implemented | Explicit user action only. |
+| JSON report export | Implemented | Explicit user action only. |
+| No telemetry by default | Implemented | No telemetry or networking code exists. |
 
 ## Release Gate For v0.1
 
@@ -24,4 +24,3 @@
 - User can open relevant System Settings panes.
 - Exported reports are clearly labeled.
 - Privacy and security docs are updated with actual behavior.
-
