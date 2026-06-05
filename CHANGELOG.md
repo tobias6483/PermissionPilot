@@ -4,6 +4,8 @@ All notable changes to PermissionPilot will be documented in this file.
 
 ## Unreleased
 
+- Added a local SwiftPM-based `.app` bundle build script and documented bundle QA.
+
 - Added code signing identity inspection for installed apps.
 - Added initial SwiftUI macOS app scaffold.
 - Added installed app inventory from common Applications folders.

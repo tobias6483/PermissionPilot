@@ -54,6 +54,13 @@ Run the app from SwiftPM:
 swift run PermissionPilot
 ```
 
+Build a local `.app` bundle:
+
+```sh
+bash scripts/build-app-bundle.sh
+open .build/app/PermissionPilot.app
+```
+
 Run repository checks:
 
 ```sh
