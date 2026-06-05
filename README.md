@@ -6,13 +6,14 @@ It aims to help people understand which apps have sensitive local permissions, w
 
 ## Status
 
-PermissionPilot has an initial native SwiftUI macOS app scaffold. The current app can inventory installed apps, show an educational permission catalog, label sensitivity, scan LaunchAgents, LaunchDaemons, login items, background tasks, and privileged helper tools, open relevant System Settings panes, perform best-effort local TCC record matching, and export local Markdown/JSON reports.
+PermissionPilot has an initial native SwiftUI macOS app scaffold. The current app can inventory installed apps, inspect code signing identity, show an educational permission catalog, label sensitivity, scan LaunchAgents, LaunchDaemons, login items, background tasks, and privileged helper tools, open relevant System Settings panes, perform best-effort local TCC record matching, and export local Markdown/JSON reports.
 
 TCC permission-state detection is intentionally conservative. If macOS does not allow the app to read the user's TCC database, or if no matching record exists, PermissionPilot shows `unknown` with evidence instead of guessing.
 
 ## Planned MVP
 
 - Inventory installed apps and known permission states where macOS allows local inspection.
+- Show signing identity metadata such as Team ID and signing authority.
 - Highlight high-sensitivity permissions such as Screen Recording, Accessibility, and Full Disk Access.
 - Explain what each permission can allow an app to do.
 - Link directly to relevant Privacy & Security panes in System Settings.

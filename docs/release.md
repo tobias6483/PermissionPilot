@@ -15,6 +15,7 @@ PermissionPilot has not shipped a release yet.
 - Run `swift build`.
 - Run `swift test`.
 - Perform manual QA on supported macOS versions.
+- Manually compare app signing identity rows with `codesign -dv --verbose=4 <app>`.
 - Manually compare the app's background item view with `sfltool dumpbtm` and common LaunchAgent/LaunchDaemon directories.
 - Manually review `/Library/PrivilegedHelperTools` helper flags for false positives.
 - Review permission-sensitive changes.

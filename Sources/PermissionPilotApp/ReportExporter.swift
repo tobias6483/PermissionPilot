@@ -18,6 +18,9 @@ enum ReportExporter {
       lines.append("")
       lines.append("- Bundle ID: \(app.bundleIdentifier ?? "unknown")")
       lines.append("- Path: \(app.path)")
+      lines.append("- Code signature: \(app.signingInfo.isSigned ? "signed" : "unsigned or unknown")")
+      lines.append("- Team ID: \(app.signingInfo.teamIdentifier ?? "unknown")")
+      lines.append("- Signing authority: \(app.signingInfo.authorities.joined(separator: " -> ").nilIfEmpty ?? "unknown")")
       lines.append("- Highest sensitivity: \(app.highestSensitivity.rawValue)")
       lines.append("")
       lines.append("| Permission | Sensitivity | Status | Evidence |")
@@ -55,5 +58,11 @@ enum ReportExporter {
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     encoder.dateEncodingStrategy = .iso8601
     return try encoder.encode(report)
+  }
+}
+
+private extension String {
+  var nilIfEmpty: String? {
+    isEmpty ? nil : self
   }
 }

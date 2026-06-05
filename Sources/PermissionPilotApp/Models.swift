@@ -35,11 +35,28 @@ struct PermissionGrant: Identifiable, Codable, Hashable {
   let evidence: String
 }
 
+struct CodeSignatureInfo: Codable, Hashable {
+  let isSigned: Bool
+  let teamIdentifier: String?
+  let authorities: [String]
+  let identifier: String?
+  let evidence: String
+
+  static let unknown = CodeSignatureInfo(
+    isSigned: false,
+    teamIdentifier: nil,
+    authorities: [],
+    identifier: nil,
+    evidence: "Code signature has not been inspected."
+  )
+}
+
 struct InstalledApp: Identifiable, Codable, Hashable {
   let id: String
   let name: String
   let bundleIdentifier: String?
   let path: String
+  var signingInfo: CodeSignatureInfo = .unknown
   let permissions: [PermissionGrant]
 
   var highestSensitivity: Sensitivity {

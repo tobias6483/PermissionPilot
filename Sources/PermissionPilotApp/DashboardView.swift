@@ -76,6 +76,10 @@ struct DashboardView: View {
               .font(.caption)
               .foregroundStyle(.secondary)
 
+            Label(app.signingInfo.isSigned ? "Signed" : "Unsigned or unknown", systemImage: app.signingInfo.isSigned ? "checkmark.seal" : "questionmark.diamond")
+              .font(.caption2)
+              .foregroundStyle(app.signingInfo.isSigned ? .green : .orange)
+
             Text(app.path)
               .font(.caption2)
               .foregroundStyle(.tertiary)
@@ -98,6 +102,7 @@ struct DashboardView: View {
         }
 
         if let selectedApp {
+          AppIdentityDetail(app: selectedApp)
           AppPermissionDetail(app: selectedApp)
         } else {
           EmptySelectionView()
@@ -204,6 +209,36 @@ private struct PermissionExplanationCard: View {
   }
 }
 
+private struct AppIdentityDetail: View {
+  let app: InstalledApp
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("App Identity")
+        .font(.title3.weight(.semibold))
+
+      IdentityRow(title: "Bundle ID", value: app.bundleIdentifier ?? "Unknown")
+      IdentityRow(title: "Code Signature", value: app.signingInfo.isSigned ? "Signed" : "Unsigned or unknown")
+
+      if let teamIdentifier = app.signingInfo.teamIdentifier {
+        IdentityRow(title: "Team ID", value: teamIdentifier)
+      }
+
+      if let identifier = app.signingInfo.identifier {
+        IdentityRow(title: "Signing ID", value: identifier)
+      }
+
+      if !app.signingInfo.authorities.isEmpty {
+        IdentityRow(title: "Authority", value: app.signingInfo.authorities.joined(separator: " -> "))
+      }
+
+      Text(app.signingInfo.evidence)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+  }
+}
+
 private struct AppPermissionDetail: View {
   let app: InstalledApp
 
@@ -227,6 +262,23 @@ private struct AppPermissionDetail: View {
         }
         Divider()
       }
+    }
+  }
+}
+
+private struct IdentityRow: View {
+  let title: String
+  let value: String
+
+  var body: some View {
+    HStack(alignment: .firstTextBaseline) {
+      Text(title)
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+        .frame(width: 110, alignment: .leading)
+      Text(value)
+        .font(.caption)
+        .textSelection(.enabled)
     }
   }
 }
@@ -327,4 +379,3 @@ private struct StatusBadge: View {
       .background(.quaternary, in: Capsule())
   }
 }
-
