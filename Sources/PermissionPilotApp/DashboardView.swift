@@ -367,39 +367,113 @@ private struct IdentityRow: View {
 
 private struct BackgroundItemsView: View {
   let items: [BackgroundItem]
+  @State private var searchText = ""
+  @State private var kindFilter: BackgroundItemKindFilter = .any
+  @State private var staleOnly = false
+  @State private var sortOrder: BackgroundItemSortOrder = .label
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
-      Text("Background Items")
-        .font(.title3.weight(.semibold))
+      HStack(alignment: .firstTextBaseline) {
+        Text("Background Items")
+          .font(.title3.weight(.semibold))
+
+        Spacer()
+
+        Text("\(filteredItems.count) of \(items.count)")
+          .font(.caption.weight(.semibold))
+          .monospacedDigit()
+          .foregroundStyle(.secondary)
+      }
+
+      BackgroundItemControls(
+        searchText: $searchText,
+        kindFilter: $kindFilter,
+        staleOnly: $staleOnly,
+        sortOrder: $sortOrder
+      )
 
       if items.isEmpty {
         ContentUnavailableView("No Background Items Found", systemImage: "gearshape.2")
+      } else if filteredItems.isEmpty {
+        ContentUnavailableView("No Matching Background Items", systemImage: "line.3.horizontal.decrease.circle")
       } else {
-        ForEach(items.prefix(20)) { item in
-          HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-              Text(item.label)
-                .font(.headline)
-              Text(item.kind.rawValue)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-              Text(item.executable ?? item.path)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
-            }
-
-            Spacer()
-
-            if item.isPotentiallyStale {
-              Label("Potentially stale", systemImage: "exclamationmark.triangle")
-                .font(.caption)
-                .foregroundStyle(.orange)
-            }
-          }
+        ForEach(filteredItems) { item in
+          BackgroundItemRow(item: item)
           Divider()
         }
+      }
+    }
+  }
+
+  private var filteredItems: [BackgroundItem] {
+    BackgroundItemListFilter(
+      searchText: searchText,
+      kind: kindFilter,
+      staleOnly: staleOnly,
+      sortOrder: sortOrder
+    ).apply(to: items)
+  }
+}
+
+private struct BackgroundItemControls: View {
+  @Binding var searchText: String
+  @Binding var kindFilter: BackgroundItemKindFilter
+  @Binding var staleOnly: Bool
+  @Binding var sortOrder: BackgroundItemSortOrder
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      TextField("Search labels, paths, executables, or kinds", text: $searchText)
+        .textFieldStyle(.roundedBorder)
+
+      HStack(spacing: 10) {
+        Picker("Kind", selection: $kindFilter) {
+          ForEach(BackgroundItemKindFilter.allCases) { filter in
+            Text(filter.rawValue).tag(filter)
+          }
+        }
+        .frame(width: 150)
+
+        Toggle("Stale only", isOn: $staleOnly)
+          .toggleStyle(.checkbox)
+          .fixedSize()
+
+        Picker("Sort", selection: $sortOrder) {
+          ForEach(BackgroundItemSortOrder.allCases) { order in
+            Text(order.rawValue).tag(order)
+          }
+        }
+        .frame(width: 130)
+      }
+    }
+  }
+}
+
+private struct BackgroundItemRow: View {
+  let item: BackgroundItem
+
+  var body: some View {
+    HStack(alignment: .top) {
+      VStack(alignment: .leading, spacing: 4) {
+        Text(item.label)
+          .font(.headline)
+        Text(item.kind.rawValue)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+        Text(item.executable ?? item.path)
+          .font(.caption2)
+          .foregroundStyle(.tertiary)
+          .lineLimit(1)
+          .textSelection(.enabled)
+      }
+
+      Spacer()
+
+      if item.isPotentiallyStale {
+        Label("Potentially stale", systemImage: "exclamationmark.triangle")
+          .font(.caption)
+          .foregroundStyle(.orange)
       }
     }
   }
