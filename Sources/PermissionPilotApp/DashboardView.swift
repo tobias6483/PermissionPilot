@@ -19,12 +19,16 @@ struct DashboardView: View {
   var body: some View {
     NavigationSplitView {
       sidebar
+        .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
     } content: {
       appList
+        .navigationSplitViewColumnWidth(min: 460, ideal: 620, max: 820)
     } detail: {
       detailPane
+        .navigationSplitViewColumnWidth(min: 360, ideal: 440, max: 620)
     }
-    .frame(minWidth: 1120, minHeight: 720)
+    .navigationSplitViewStyle(.balanced)
+    .frame(minWidth: 1060, idealWidth: 1320, minHeight: 720, idealHeight: 820)
     .toolbar {
       ToolbarItemGroup {
         if store.isScanning {
@@ -150,6 +154,7 @@ struct DashboardView: View {
         }
       }
       .padding(24)
+      .frame(maxWidth: 680, alignment: .leading)
       .frame(maxWidth: .infinity, alignment: .leading)
     }
     .navigationTitle(selectedApp?.name ?? "Details")
@@ -276,8 +281,10 @@ private struct PermissionSidebarRow: View {
   var body: some View {
     HStack(spacing: 8) {
       Label(permission.name, systemImage: symbol)
+        .lineLimit(1)
       Spacer()
       StatusCountStrip(summary: summary, compact: true)
+        .layoutPriority(1)
     }
   }
 }
@@ -302,33 +309,64 @@ private struct AppListControls: View {
           .frame(minWidth: 34, alignment: .trailing)
       }
 
-      HStack(spacing: 10) {
-        Picker("Status", selection: $permissionStatusFilter) {
-          ForEach(PermissionStatusFilter.allCases) { filter in
-            Text(filter.rawValue).tag(filter)
-          }
+      ViewThatFits(in: .horizontal) {
+        filterControls
+        VStack(alignment: .leading, spacing: 10) {
+          statusSignatureControls
+          sortControl
         }
-        .pickerStyle(.segmented)
-        .frame(maxWidth: 280)
-
-        Picker("Signature", selection: $signatureFilter) {
-          ForEach(SignatureFilter.allCases) { filter in
-            Text(filter.rawValue).tag(filter)
-          }
+        VStack(alignment: .leading, spacing: 10) {
+          statusControl
+          signatureControl
+          sortControl
         }
-        .pickerStyle(.segmented)
-        .frame(maxWidth: 280)
-
-        Picker("Sort", selection: $sortOrder) {
-          ForEach(AppSortOrder.allCases) { order in
-            Text(order.rawValue).tag(order)
-          }
-        }
-        .frame(width: 170)
       }
     }
     .padding(12)
     .background(.background)
+  }
+
+  private var filterControls: some View {
+    HStack(spacing: 10) {
+      statusSignatureControls
+      sortControl
+    }
+  }
+
+  private var statusSignatureControls: some View {
+    HStack(spacing: 10) {
+      statusControl
+      signatureControl
+    }
+  }
+
+  private var statusControl: some View {
+    Picker("Status", selection: $permissionStatusFilter) {
+      ForEach(PermissionStatusFilter.allCases) { filter in
+        Text(filter.rawValue).tag(filter)
+      }
+    }
+    .pickerStyle(.segmented)
+    .frame(width: 260)
+  }
+
+  private var signatureControl: some View {
+    Picker("Signature", selection: $signatureFilter) {
+      ForEach(SignatureFilter.allCases) { filter in
+        Text(filter.rawValue).tag(filter)
+      }
+    }
+    .pickerStyle(.segmented)
+    .frame(width: 260)
+  }
+
+  private var sortControl: some View {
+    Picker("Sort", selection: $sortOrder) {
+      ForEach(AppSortOrder.allCases) { order in
+        Text(order.rawValue).tag(order)
+      }
+    }
+    .frame(width: 160)
   }
 }
 
@@ -341,6 +379,7 @@ private struct AppListRow: View {
       HStack {
         Text(app.name)
           .font(.headline)
+          .lineLimit(1)
         Spacer()
 
         if let selectedPermission, let grant = app.grant(for: selectedPermission) {
@@ -378,6 +417,7 @@ private struct PermissionExplanationCard: View {
       HStack {
         Text(permission.name)
           .font(.title2.weight(.semibold))
+          .lineLimit(1)
         SensitivityBadge(sensitivity: permission.sensitivity)
       }
 
@@ -399,7 +439,7 @@ private struct PermissionExplanationCard: View {
         }
       }
       .pickerStyle(.segmented)
-      .frame(maxWidth: 420)
+      .frame(maxWidth: .infinity)
 
       Text("Manual QA status is local runtime state only; it does not modify permissions or System Settings.")
         .font(.caption)
@@ -416,7 +456,7 @@ private struct PermissionStatusSummaryView: View {
       Text("Current Scan")
         .font(.headline)
 
-      HStack(spacing: 10) {
+      LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: 10)], alignment: .leading, spacing: 10) {
         StatusCountBadge(title: "Granted", count: summary.granted, color: .green)
         StatusCountBadge(title: "Denied", count: summary.denied, color: .orange)
         StatusCountBadge(title: "Unknown", count: summary.unknown, color: .secondary)
@@ -474,7 +514,7 @@ private struct StatusCountBadge: View {
         .monospacedDigit()
         .foregroundStyle(color)
     }
-    .frame(width: 96, alignment: .leading)
+    .frame(maxWidth: .infinity, alignment: .leading)
     .padding(10)
     .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
   }
@@ -605,6 +645,8 @@ private struct IdentityRow: View {
       Text(value)
         .font(.caption)
         .textSelection(.enabled)
+        .lineLimit(3)
+        .truncationMode(.middle)
     }
   }
 }
@@ -677,26 +719,49 @@ private struct BackgroundItemControls: View {
       TextField("Search labels, paths, executables, or kinds", text: $searchText)
         .textFieldStyle(.roundedBorder)
 
-      HStack(spacing: 10) {
-        Picker("Kind", selection: $kindFilter) {
-          ForEach(BackgroundItemKindFilter.allCases) { filter in
-            Text(filter.rawValue).tag(filter)
-          }
+      ViewThatFits(in: .horizontal) {
+        backgroundFilterControls
+        VStack(alignment: .leading, spacing: 10) {
+          backgroundKindControls
+          sortControl
         }
-        .frame(width: 150)
-
-        Toggle("Stale only", isOn: $staleOnly)
-          .toggleStyle(.checkbox)
-          .fixedSize()
-
-        Picker("Sort", selection: $sortOrder) {
-          ForEach(BackgroundItemSortOrder.allCases) { order in
-            Text(order.rawValue).tag(order)
-          }
-        }
-        .frame(width: 130)
       }
     }
+  }
+
+  private var backgroundFilterControls: some View {
+    HStack(spacing: 10) {
+      backgroundKindControls
+      sortControl
+    }
+  }
+
+  private var backgroundKindControls: some View {
+    HStack(spacing: 10) {
+      kindControl
+
+      Toggle("Stale only", isOn: $staleOnly)
+        .toggleStyle(.checkbox)
+        .fixedSize()
+    }
+  }
+
+  private var kindControl: some View {
+    Picker("Kind", selection: $kindFilter) {
+      ForEach(BackgroundItemKindFilter.allCases) { filter in
+        Text(filter.rawValue).tag(filter)
+      }
+    }
+    .frame(width: 150)
+  }
+
+  private var sortControl: some View {
+    Picker("Sort", selection: $sortOrder) {
+      ForEach(BackgroundItemSortOrder.allCases) { order in
+        Text(order.rawValue).tag(order)
+      }
+    }
+    .frame(width: 130)
   }
 }
 
@@ -775,11 +840,13 @@ private struct GuidanceCard: View {
         Image(systemName: "info.circle")
         Text(guidance.title)
           .font(.headline)
+          .fixedSize(horizontal: false, vertical: true)
       }
 
       Text(guidance.message)
         .font(.callout)
         .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
 
       if guidance == .databaseUnreadable,
          let permission = PermissionCatalog.all.first(where: { $0.id == "full-disk-access" }) {
@@ -805,6 +872,7 @@ private struct ExplanationRow: View {
         .font(.headline)
       Text(text)
         .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
     }
   }
 }
