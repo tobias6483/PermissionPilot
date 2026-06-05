@@ -44,4 +44,14 @@ if ! git check-ignore -q project.md; then
   exit 1
 fi
 
+if grep -q "## Planned MVP" README.md; then
+  echo "README.md should describe the implemented v0.1 MVP, not a planned MVP." >&2
+  exit 1
+fi
+
+if grep -q "| .* | Partial |" docs/requirements.md; then
+  echo "docs/requirements.md should not mark v0.1 MVP requirements as Partial." >&2
+  exit 1
+fi
+
 echo "Repository foundation checks passed."
