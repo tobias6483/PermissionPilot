@@ -10,6 +10,12 @@ The latest public alpha, `v0.1.0-alpha.5`, is available as an early downloadable
 
 PermissionPilot has an initial native SwiftUI macOS app scaffold. The current app can inventory installed apps, inspect code signing identity, show an educational permission catalog based on a local macOS Privacy & Security audit, label sensitivity, scan LaunchAgents, LaunchDaemons, login items, background tasks, and privileged helper tools, open Full Disk Access guidance when local TCC visibility is limited, perform best-effort local TCC record matching across user and system TCC databases, show conservative review priorities, and export full or filtered local Markdown/JSON reports.
 
+## Screenshots
+
+![Permission audit view showing Screen Recording grants](docs/assets/screenshots/permission-audit.png)
+
+![Background items view showing launch agents, daemons, login items, and helper detail](docs/assets/screenshots/background-items.png)
+
 TCC permission-state detection is intentionally conservative. If macOS does not allow the app to read local TCC databases, PermissionPilot marks evidence as unavailable instead of guessing. If readable TCC data has no matching record for an app and permission, the app treats that as `notRecorded`, not as an unknown grant. First-run guidance explains OS visibility limits and offers a single Full Disk Access action for more visibility, but the app stays local-first and read-only.
 
 PermissionPilot separates app permissions from global system settings. App-scoped permissions such as Camera, Microphone, Files & Folders, Home, Focus, and Remote Desktop can be shown as app-specific evidence. Global settings such as FileVault, Analytics & Improvements, Apple Advertising, Apple Intelligence Report, Sensitive Content Warning, Blocked Contacts, and Background Security Improvements are covered in the catalog but are not shown as if every app has its own grant.
