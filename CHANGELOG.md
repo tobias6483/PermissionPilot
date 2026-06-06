@@ -4,6 +4,10 @@ All notable changes to PermissionPilot will be documented in this file.
 
 ## Unreleased
 
+No unreleased changes yet.
+
+## v0.1.0-alpha.3 - 2026-06-06
+
 ## Added
 
 - Expanded the known TCC-backed permission catalog and service map to cover Photos, Files & Folders, Calendars, Contacts, Reminders, Bluetooth, Local Network, Speech Recognition, Keyboard Monitoring, App Management, Developer Tools, and Media & Apple Music.
