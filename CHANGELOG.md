@@ -4,8 +4,11 @@ All notable changes to PermissionPilot will be documented in this file.
 
 ## Unreleased
 
+## v0.1.0-alpha.4 - 2026-06-06
+
 ## Changed
 
+- Added the first downloadable prerelease app artifact plan: an unsigned `PermissionPilot.app.zip` with a SHA-256 checksum, clearly marked as an early alpha artifact.
 - Focused app-scoped permission selections on recorded grants/denials/unknown/unavailable states by default, while keeping `Any` and `Not Recorded` status filters available for broader audits.
 - Clarified documentation for app-scoped permissions, global/system Privacy & Security settings, installed app identity, and background execution evidence.
 - Kept global/system Privacy & Security settings out of per-app permission summaries, app lists, and app detail panes.

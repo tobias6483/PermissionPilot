@@ -6,7 +6,7 @@ It aims to help people understand which apps have sensitive local permissions, w
 
 ## Status
 
-The latest public alpha, `v0.1.0-alpha.3`, is available as a source-only GitHub prerelease. Signed and notarized `.app` artifacts are not attached until the distribution workflow is ready.
+The latest public alpha, `v0.1.0-alpha.4`, is available as an early downloadable `.app.zip` GitHub prerelease with a SHA-256 checksum. The artifact is unsigned and not notarized, so macOS Gatekeeper warnings are expected. Signed and notarized artifacts are planned for the Developer ID distribution workflow.
 
 PermissionPilot has an initial native SwiftUI macOS app scaffold. The current app can inventory installed apps, inspect code signing identity, show an educational permission catalog based on a local macOS Privacy & Security audit, label sensitivity, scan LaunchAgents, LaunchDaemons, login items, background tasks, and privileged helper tools, open Full Disk Access guidance when local TCC visibility is limited, perform best-effort local TCC record matching across user and system TCC databases, show conservative review priorities, and export full or filtered local Markdown/JSON reports.
 
