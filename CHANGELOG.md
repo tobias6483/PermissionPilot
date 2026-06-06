@@ -4,6 +4,12 @@ All notable changes to PermissionPilot will be documented in this file.
 
 ## Unreleased
 
+## v0.1.0-alpha.5 - 2026-06-06
+
+## Changed
+
+- Defaulted app-scoped permission selections to `Granted` when granted apps exist, `Denied` when only denied apps are recorded, and `Recorded` as the fallback.
+
 ## v0.1.0-alpha.4 - 2026-06-06
 
 ## Changed

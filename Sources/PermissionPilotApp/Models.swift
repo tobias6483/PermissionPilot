@@ -204,6 +204,18 @@ struct PermissionStatusSummary: Equatable {
     granted > 0 || denied > 0
   }
 
+  var defaultStatusFilter: PermissionStatusFilter {
+    if granted > 0 {
+      return .granted
+    }
+
+    if denied > 0 {
+      return .denied
+    }
+
+    return .recorded
+  }
+
   init(permission: PermissionDefinition, apps: [InstalledApp]) {
     self.permission = permission
 
