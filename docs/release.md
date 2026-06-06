@@ -1,6 +1,6 @@
 # Release Process
 
-PermissionPilot's first public release is planned as the source-only GitHub prerelease `v0.1.0-alpha.1`.
+PermissionPilot's first public release is the source-only GitHub prerelease `v0.1.0-alpha.1`.
 
 Signed and notarized app artifacts are not attached until the Developer ID distribution workflow is complete.
 
