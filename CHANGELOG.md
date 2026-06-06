@@ -4,6 +4,10 @@ All notable changes to PermissionPilot will be documented in this file.
 
 ## Unreleased
 
+No unreleased changes yet.
+
+## v0.1.0-alpha.1 - 2026-06-06
+
 - Reworked dashboard interactions so permission rows, scan summary apps, installed apps, and background items are explicit clickable selections.
 - Simplified the right detail pane by removing duplicated permission count cards and consolidating limited-TCC guidance around one prominent Full Disk Access action.
 - Added a Settings window with Developer Mode for local System Settings link QA controls.

@@ -1,8 +1,10 @@
 # Release Process
 
-PermissionPilot has not shipped a release yet.
+PermissionPilot's first public release is planned as the source-only GitHub prerelease `v0.1.0-alpha.1`.
 
-## Before v0.1
+Signed and notarized app artifacts are not attached until the Developer ID distribution workflow is complete.
+
+## Before Signed v0.1 Artifacts
 
 - Exercise the SwiftPM app bundle workflow on a clean checkout.
 - Configure a real Developer ID signing identity before distributing artifacts.
@@ -72,17 +74,23 @@ Do not attach release artifacts until signing, notarization, stapling, and verif
 
 Create GitHub Releases only from a reviewed, merged, and tagged commit on the default branch. Do not create a public release from an unmerged feature branch.
 
-Recommended draft flow for v0.1:
+Recommended source-only prerelease flow for `v0.1.0-alpha.1`:
 
 ```sh
 git switch main
 git pull --ff-only
-git tag -a v0.1.0 -m "PermissionPilot v0.1.0"
-git push origin v0.1.0
-gh release create v0.1.0 --draft --title "PermissionPilot v0.1.0" --notes-file docs/v0.1-release-notes.md
+git tag -a v0.1.0-alpha.1 -m "PermissionPilot v0.1.0-alpha.1"
+git push origin v0.1.0-alpha.1
+gh release create v0.1.0-alpha.1 --prerelease --title "PermissionPilot v0.1.0-alpha.1" --notes-file docs/v0.1-release-notes.md
 ```
 
-Before publishing the draft:
+For source-only prereleases:
+
+- Do not attach unsigned local rehearsal bundles.
+- Confirm GitHub's automatically generated source archive is the only downloadable artifact.
+- Make the prerelease status explicit in GitHub.
+
+Before publishing any release with app artifacts:
 
 - Confirm `docs/v0.1-release-notes.md` matches the exact tagged commit.
 - Attach only signed, notarized, stapled, and verified artifacts.
@@ -111,5 +119,5 @@ Before publishing the draft:
 - Manually review `/Library/PrivilegedHelperTools` helper flags for false positives.
 - Review permission-sensitive changes.
 - Create release notes.
-- Create a GitHub Release draft from the tagged default-branch commit.
+- Create a GitHub prerelease from the tagged default-branch commit.
 - Attach signed/notarized artifacts only after the signing process is documented and verified.
