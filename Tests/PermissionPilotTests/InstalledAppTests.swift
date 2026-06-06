@@ -157,6 +157,42 @@ final class InstalledAppTests: XCTestCase {
     XCTAssertTrue(summary.hasKnownState)
   }
 
+  func testPermissionStatusSummaryDefaultsToGrantedWhenGrantedAppsExist() {
+    let permission = PermissionCatalog.all[0]
+    let apps = [
+      makeApp(name: "Denied", grants: [PermissionGrant(permission: permission, status: .denied, evidence: "Matched.")]),
+      makeApp(name: "Granted", grants: [PermissionGrant(permission: permission, status: .granted, evidence: "Matched.")])
+    ]
+
+    let summary = PermissionStatusSummary(permission: permission, apps: apps)
+
+    XCTAssertEqual(summary.defaultStatusFilter, .granted)
+  }
+
+  func testPermissionStatusSummaryDefaultsToDeniedWhenOnlyDeniedAppsExist() {
+    let permission = PermissionCatalog.all[0]
+    let apps = [
+      makeApp(name: "Denied", grants: [PermissionGrant(permission: permission, status: .denied, evidence: "Matched.")]),
+      makeApp(name: "Not Recorded", grants: [PermissionGrant(permission: permission, status: .notRecorded, evidence: "No record.")])
+    ]
+
+    let summary = PermissionStatusSummary(permission: permission, apps: apps)
+
+    XCTAssertEqual(summary.defaultStatusFilter, .denied)
+  }
+
+  func testPermissionStatusSummaryDefaultsToRecordedWithoutGrantedOrDeniedApps() {
+    let permission = PermissionCatalog.all[0]
+    let apps = [
+      makeApp(name: "Unknown", grants: [PermissionGrant(permission: permission, status: .unknown, evidence: "Matched unknown.", evidenceKind: .matchedUnknown)]),
+      makeApp(name: "Not Recorded", grants: [PermissionGrant(permission: permission, status: .notRecorded, evidence: "No record.")])
+    ]
+
+    let summary = PermissionStatusSummary(permission: permission, apps: apps)
+
+    XCTAssertEqual(summary.defaultStatusFilter, .recorded)
+  }
+
   func testReviewPriorityIsHighForUnsignedHighSensitivityGrant() {
     let app = makeApp(
       name: "Recorder",

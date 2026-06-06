@@ -82,18 +82,18 @@ Do not attach signed/notarized DMG artifacts until signing, notarization, stapli
 
 Create GitHub Releases only from a reviewed, merged, and tagged commit on the default branch. Do not create a public release from an unmerged feature branch.
 
-Recommended unsigned app artifact prerelease flow, using `v0.1.0-alpha.4` as an alpha example:
+Recommended unsigned app artifact prerelease flow, using `v0.1.0-alpha.5` as an alpha example:
 
 ```sh
 git switch main
 git pull --ff-only
-VERSION=0.1.0 BUILD_NUMBER=4 bash scripts/build-app-bundle.sh
+VERSION=0.1.0 BUILD_NUMBER=5 bash scripts/build-app-bundle.sh
 mkdir -p dist/artifacts
 ditto -c -k --keepParent .build/app/PermissionPilot.app dist/artifacts/PermissionPilot.app.zip
 shasum -a 256 dist/artifacts/PermissionPilot.app.zip > dist/artifacts/PermissionPilot.app.zip.sha256
-git tag -a v0.1.0-alpha.4 -m "PermissionPilot v0.1.0-alpha.4"
-git push origin v0.1.0-alpha.4
-gh release create v0.1.0-alpha.4 --prerelease --title "PermissionPilot v0.1.0-alpha.4" --notes-file docs/v0.1-release-notes.md dist/artifacts/PermissionPilot.app.zip dist/artifacts/PermissionPilot.app.zip.sha256
+git tag -a v0.1.0-alpha.5 -m "PermissionPilot v0.1.0-alpha.5"
+git push origin v0.1.0-alpha.5
+gh release create v0.1.0-alpha.5 --prerelease --title "PermissionPilot v0.1.0-alpha.5" --notes-file docs/v0.1-release-notes.md dist/artifacts/PermissionPilot.app.zip dist/artifacts/PermissionPilot.app.zip.sha256
 ```
 
 For unsigned app artifact prereleases:

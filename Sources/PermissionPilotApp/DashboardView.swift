@@ -409,7 +409,9 @@ struct DashboardView: View {
 
   private func selectPermission(_ permission: PermissionDefinition) {
     store.selectedPermission = permission
-    permissionStatusFilter = permission.evidenceSource == .systemSetting ? .any : .recorded
+    permissionStatusFilter = permission.evidenceSource == .systemSetting
+      ? .any
+      : PermissionStatusSummary(permission: permission, apps: store.apps).defaultStatusFilter
     sortOrder = permission.evidenceSource == .systemSetting ? sortOrder : .permissionStatus
     selectedDashboardSection = permission.evidenceSource == .systemSetting ? .systemSetting : .apps
   }
