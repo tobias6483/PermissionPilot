@@ -3,6 +3,7 @@ import SwiftUI
 
 private enum DashboardSection {
   case apps
+  case systemSetting
   case backgroundItems
   case staleBackgroundItems
 }
@@ -150,13 +151,13 @@ struct DashboardView: View {
         Section(group.title) {
           ForEach(group.permissions) { permission in
             Button {
-              selectApps(permission: permission)
+              selectPermission(permission)
             } label: {
               PermissionSidebarRow(
                 permission: permission,
                 summary: PermissionStatusSummary(permission: permission, apps: store.apps),
                 symbol: symbol(for: permission),
-                isSelected: selectedDashboardSection == .apps && store.selectedPermission == permission
+                isSelected: store.selectedPermission == permission && selectedDashboardSection.matches(permission)
               )
             }
             .buttonStyle(.plain)
@@ -207,6 +208,8 @@ struct DashboardView: View {
     switch selectedDashboardSection {
     case .apps:
       appList
+    case .systemSetting:
+      systemSettingPane
     case .backgroundItems, .staleBackgroundItems:
       backgroundItemsList
     }
@@ -254,6 +257,24 @@ struct DashboardView: View {
     }
   }
 
+  private var systemSettingPane: some View {
+    ScrollView {
+      if let permission = store.selectedPermission {
+        SystemSettingOverview(
+          permission: permission,
+          developerModeEnabled: developerModeEnabled,
+          linkStatus: bindingForSystemSettingsStatus(permission)
+        )
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      } else {
+        ContentUnavailableView("Select A System Setting", systemImage: "gearshape")
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      }
+    }
+    .navigationTitle(store.selectedPermission?.name ?? "System Setting")
+  }
+
   private var backgroundItemsList: some View {
     ScrollView {
       BackgroundItemsView(
@@ -278,6 +299,8 @@ struct DashboardView: View {
         switch selectedDashboardSection {
         case .apps:
           appsDetailContent
+        case .systemSetting:
+          systemSettingDetailContent
         case .backgroundItems, .staleBackgroundItems:
           backgroundItemDetailContent
         }
@@ -327,10 +350,21 @@ struct DashboardView: View {
     }
   }
 
+  @ViewBuilder
+  private var systemSettingDetailContent: some View {
+    if let permission = store.selectedPermission {
+      SystemSettingDetail(permission: permission)
+    } else {
+      ContentUnavailableView("Select A System Setting", systemImage: "gearshape")
+    }
+  }
+
   private var detailTitle: String {
     switch selectedDashboardSection {
     case .apps:
       return selectedApp?.name ?? "Details"
+    case .systemSetting:
+      return store.selectedPermission?.name ?? "System Setting"
     case .backgroundItems, .staleBackgroundItems:
       return selectedBackgroundItem?.label ?? "Background Item"
     }
@@ -367,6 +401,12 @@ struct DashboardView: View {
     selectedDashboardSection = .apps
     store.selectedPermission = permission
     permissionStatusFilter = .any
+  }
+
+  private func selectPermission(_ permission: PermissionDefinition) {
+    store.selectedPermission = permission
+    permissionStatusFilter = .any
+    selectedDashboardSection = permission.evidenceSource == .systemSetting ? .systemSetting : .apps
   }
 
   private func selectBackgroundItems(staleOnly: Bool) {
@@ -516,13 +556,35 @@ private struct PermissionSidebarRow: View {
       Label(permission.name, systemImage: symbol)
         .lineLimit(1)
       Spacer()
-      StatusCountStrip(summary: summary, compact: true)
-        .layoutPriority(1)
+      if permission.evidenceSource == .systemSetting {
+        Text("System")
+          .font(.caption2.weight(.semibold))
+          .foregroundStyle(.secondary)
+          .padding(.horizontal, 6)
+          .padding(.vertical, 2)
+          .background(Color.secondary.opacity(0.12), in: Capsule())
+      } else {
+        StatusCountStrip(summary: summary, compact: true)
+          .layoutPriority(1)
+      }
     }
     .padding(.horizontal, 8)
     .padding(.vertical, 6)
     .contentShape(Rectangle())
     .background(isSelected ? Color.primary.opacity(0.06) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+  }
+}
+
+private extension DashboardSection {
+  func matches(_ permission: PermissionDefinition) -> Bool {
+    switch self {
+    case .apps:
+      return permission.evidenceSource == .tcc
+    case .systemSetting:
+      return permission.evidenceSource == .systemSetting
+    case .backgroundItems, .staleBackgroundItems:
+      return false
+    }
   }
 }
 
@@ -714,6 +776,77 @@ private struct PermissionExplanationCard: View {
           .font(.caption)
           .foregroundStyle(.secondary)
       }
+    }
+  }
+}
+
+private struct SystemSettingOverview: View {
+  let permission: PermissionDefinition
+  let developerModeEnabled: Bool
+  @Binding var linkStatus: SystemSettingsLinkStatus
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      HStack(spacing: 8) {
+        Text(permission.name)
+          .font(.title2.weight(.semibold))
+        SensitivityBadge(sensitivity: permission.sensitivity)
+        Text("System setting")
+          .font(.caption.weight(.semibold))
+          .foregroundStyle(.secondary)
+          .padding(.horizontal, 8)
+          .padding(.vertical, 4)
+          .background(.quaternary.opacity(0.6), in: Capsule())
+      }
+
+      Text("This category is part of macOS Privacy & Security coverage, but it is not a per-app permission grant.")
+        .font(.callout)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+
+      ExplanationRow(title: "Why this matters", text: permission.whyItMatters)
+      ExplanationRow(title: "What macOS can do", text: permission.capability)
+      ExplanationRow(title: "How to review it", text: permission.revokeHint)
+
+      if developerModeEnabled {
+        Divider()
+
+        Picker("Link QA", selection: $linkStatus) {
+          ForEach(SystemSettingsLinkStatus.allCases) { status in
+            Text(status.rawValue).tag(status)
+          }
+        }
+        .pickerStyle(.segmented)
+
+        Text("Developer-only local QA state; it does not modify permissions or System Settings.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    }
+  }
+}
+
+private struct SystemSettingDetail: View {
+  let permission: PermissionDefinition
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("System Setting")
+        .font(.title3.weight(.semibold))
+
+      IdentityRow(title: "Category", value: permission.name)
+      IdentityRow(title: "Evidence", value: "Not app-scoped")
+      IdentityRow(title: "Scope", value: "Mac, Apple service, MDM policy, or security posture")
+
+      ExplanationRow(
+        title: "Why this is not shown under each app",
+        text: "This setting does not answer whether a selected app has access. It answers how macOS or an Apple service is configured, so showing it under every app would be misleading."
+      )
+
+      ExplanationRow(
+        title: "Examples",
+        text: "FileVault applies to disk encryption, Analytics & Improvements applies to diagnostic sharing, and Apple Advertising applies to Apple ad personalization. Those are system-level states, not grants owned by ChatGPT, Safari, VS Code, or any other app."
+      )
     }
   }
 }

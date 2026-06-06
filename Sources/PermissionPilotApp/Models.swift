@@ -195,6 +195,15 @@ struct PermissionStatusSummary: Equatable {
   init(permission: PermissionDefinition, apps: [InstalledApp]) {
     self.permission = permission
 
+    if permission.evidenceSource == .systemSetting {
+      self.granted = 0
+      self.denied = 0
+      self.notRecorded = 0
+      self.unavailable = 0
+      self.unknown = 0
+      return
+    }
+
     var granted = 0
     var denied = 0
     var notRecorded = 0

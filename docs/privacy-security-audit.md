@@ -19,7 +19,7 @@ PermissionPilot scans and reports several different kinds of local privacy/secur
 | Evidence type | What PermissionPilot scans | How it appears in the app |
 | --- | --- | --- |
 | App-scoped TCC permissions | Per-app grants and denials in readable user/system TCC databases. | Shown under installed apps and permission summaries. |
-| Global or system-scoped Privacy & Security settings | System Settings categories that apply to the Mac, Apple services, MDM policy, or security posture rather than one app. | Listed in the permission catalog/sidebar and explained as not app-scoped. They are not shown as app grants. |
+| Global or system-scoped Privacy & Security settings | System Settings categories that apply to the Mac, Apple services, MDM policy, or security posture rather than one app. | Listed in the permission catalog/sidebar and explained as not app-scoped. They are not shown as app grants, app-row badges, app-list filters, or selected-app permission rows. |
 | Installed app identity | `.app` bundles in `/Applications` and `~/Applications`, plus local `codesign` metadata. | Shown as app inventory, signing identity, Team ID, signing authority, and review-priority evidence. |
 | Background execution items | LaunchAgents, LaunchDaemons, Login Items, background tasks, ServiceManagement records, and privileged helper tools. | Shown in the Background Items workflow with kind, path, executable, stale signal, stale reason, and evidence. |
 | Local reports | Explicit user-exported Markdown or JSON scan reports. | Exported only when the user chooses an export action. |
@@ -78,7 +78,7 @@ These categories are included in the catalog for coverage but are not modeled as
 
 PermissionPilot reports these as not app-scoped instead of guessing a per-app grant.
 
-These categories are still useful audit coverage. They help users review the Mac's security and Apple-service posture, but they do not belong in each app's "Selected App Permissions" list.
+These categories are still useful audit coverage. They help users review the Mac's security and Apple-service posture, but they do not belong in the installed app list or in each app's "Selected App Permissions" list.
 
 ## Scanner Boundaries
 
