@@ -22,6 +22,9 @@
 - name: area:release
   color: "cfd3d7"
   description: Release process or artifacts.
+- name: area:ui
+  color: "cfd3d7"
+  description: Dashboard, navigation, settings, and app interaction.
 - name: area:scanner
   color: "cfd3d7"
   description: Local scanner behavior.
@@ -37,4 +40,6 @@
 - name: hardware-qa
   color: "fbca04"
   description: Needs testing on real macOS hardware.
-
+- name: release-checklist
+  color: "fbca04"
+  description: Tracks release readiness tasks.

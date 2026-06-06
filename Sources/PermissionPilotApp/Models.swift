@@ -290,6 +290,17 @@ enum BackgroundItemKind: String, Codable, CaseIterable {
   case backgroundTask = "Background Task"
   case serviceManagementItem = "Service Management Item"
   case privilegedHelperTool = "Privileged Helper Tool"
+
+  var shortTitle: String {
+    switch self {
+    case .launchAgent: "Agent"
+    case .launchDaemon: "Daemon"
+    case .loginItem: "Login"
+    case .backgroundTask: "Task"
+    case .serviceManagementItem: "Service"
+    case .privilegedHelperTool: "Helper"
+    }
+  }
 }
 
 enum BackgroundItemKindFilter: String, Codable, CaseIterable, Identifiable {

@@ -22,10 +22,13 @@ body:
       label: Area
       options:
         - Permission overview
+        - Dashboard UI
         - Explain mode
         - System Settings links
+        - Developer Mode QA
         - Background scanner
         - Export
+        - Release process
         - Documentation
         - Other
     validations:
@@ -34,4 +37,3 @@ body:
     id: privacy
     attributes:
       label: Privacy or security considerations
-

@@ -3,6 +3,7 @@ import SwiftUI
 
 struct DashboardView: View {
   @EnvironmentObject private var store: DashboardStore
+  @AppStorage("developerModeEnabled") private var developerModeEnabled = false
   @State private var selectedApp: InstalledApp?
   @State private var selectedBackgroundItem: BackgroundItem?
   @State private var exportMessage: String?
@@ -64,22 +65,39 @@ struct DashboardView: View {
   }
 
   private var sidebar: some View {
-    List(selection: $store.selectedPermission) {
+    List {
       Section("Permissions") {
         ForEach(PermissionCatalog.all) { permission in
-          PermissionSidebarRow(
-            permission: permission,
-            summary: PermissionStatusSummary(permission: permission, apps: store.apps),
-            symbol: symbol(for: permission)
-          )
-            .tag(Optional(permission))
+          Button {
+            store.selectedPermission = permission
+            permissionStatusFilter = .any
+          } label: {
+            PermissionSidebarRow(
+              permission: permission,
+              summary: PermissionStatusSummary(permission: permission, apps: store.apps),
+              symbol: symbol(for: permission),
+              isSelected: store.selectedPermission == permission
+            )
+          }
+          .buttonStyle(.plain)
         }
       }
 
       Section("Scan Summary") {
-        Label("\(store.apps.count) apps", systemImage: "app.dashed")
-        Label("\(store.backgroundItems.count) background items", systemImage: "gearshape.2")
-        Label("\(staleBackgroundItemCount) potentially stale", systemImage: "exclamationmark.triangle")
+        Button {
+          store.selectedPermission = nil
+          permissionStatusFilter = .any
+        } label: {
+          SidebarSummaryRow(
+            title: "\(store.apps.count) apps",
+            symbol: "app.dashed",
+            isSelected: store.selectedPermission == nil
+          )
+        }
+        .buttonStyle(.plain)
+
+        SidebarSummaryRow(title: "\(store.backgroundItems.count) background items", symbol: "gearshape.2")
+        SidebarSummaryRow(title: "\(staleBackgroundItemCount) potentially stale", symbol: "exclamationmark.triangle")
       }
     }
     .navigationTitle("PermissionPilot")
@@ -95,20 +113,36 @@ struct DashboardView: View {
         resultCount: filteredApps.count
       )
 
-      List(selection: $selectedApp) {
-        Section("Installed Apps") {
-          if filteredApps.isEmpty {
-            ContentUnavailableView("No Matching Apps", systemImage: "line.3.horizontal.decrease.circle")
-          } else {
+      if filteredApps.isEmpty {
+        ContentUnavailableView("No Matching Apps", systemImage: "line.3.horizontal.decrease.circle")
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      } else {
+        List {
+          Section("Installed Apps") {
             ForEach(filteredApps) { app in
-              AppListRow(app: app, selectedPermission: store.selectedPermission)
-                .tag(Optional(app))
+              Button {
+                selectedApp = app
+              } label: {
+                AppListRow(app: app, selectedPermission: store.selectedPermission)
+                  .contentShape(Rectangle())
+                  .background(
+                    selectedApp?.id == app.id ? Color.accentColor.opacity(0.10) : Color.clear,
+                    in: RoundedRectangle(cornerRadius: 8)
+                  )
+              }
+              .buttonStyle(.plain)
             }
           }
         }
       }
     }
     .navigationTitle(store.selectedPermission?.name ?? "Apps")
+    .task {
+      reconcileSelectedApp()
+    }
+    .onChange(of: filteredApps.map(\.id)) {
+      reconcileSelectedApp()
+    }
   }
 
   @ViewBuilder
@@ -122,7 +156,7 @@ struct DashboardView: View {
         if let permission = store.selectedPermission {
           PermissionExplanationCard(
             permission: permission,
-            summary: PermissionStatusSummary(permission: permission, apps: store.apps),
+            developerModeEnabled: developerModeEnabled,
             linkStatus: bindingForSystemSettingsStatus(permission)
           )
         }
@@ -142,10 +176,6 @@ struct DashboardView: View {
           staleOnly: $backgroundStaleOnly,
           sortOrder: $backgroundSortOrder
         )
-
-        if let selectedBackgroundItem {
-          BackgroundItemDetail(item: selectedBackgroundItem)
-        }
 
         if let exportMessage {
           Text(exportMessage)
@@ -236,6 +266,20 @@ struct DashboardView: View {
     )
   }
 
+  private func reconcileSelectedApp() {
+    guard let selectedApp else {
+      self.selectedApp = filteredApps.first
+      return
+    }
+
+    if let refreshedApp = filteredApps.first(where: { $0.id == selectedApp.id }) {
+      self.selectedApp = refreshedApp
+      return
+    }
+
+    self.selectedApp = filteredApps.first
+  }
+
   private func exportMarkdown(scope: ReportScope) {
     let report = report(for: scope)
     let panel = NSSavePanel()
@@ -277,6 +321,7 @@ private struct PermissionSidebarRow: View {
   let permission: PermissionDefinition
   let summary: PermissionStatusSummary
   let symbol: String
+  let isSelected: Bool
 
   var body: some View {
     HStack(spacing: 8) {
@@ -286,6 +331,26 @@ private struct PermissionSidebarRow: View {
       StatusCountStrip(summary: summary, compact: true)
         .layoutPriority(1)
     }
+    .padding(.horizontal, 8)
+    .padding(.vertical, 6)
+    .contentShape(Rectangle())
+    .background(isSelected ? Color.accentColor.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+  }
+}
+
+private struct SidebarSummaryRow: View {
+  let title: String
+  let symbol: String
+  var isSelected = false
+
+  var body: some View {
+    Label(title, systemImage: symbol)
+      .lineLimit(1)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 6)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .contentShape(Rectangle())
+      .background(isSelected ? Color.accentColor.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
   }
 }
 
@@ -403,13 +468,14 @@ private struct AppListRow: View {
         .foregroundStyle(.tertiary)
         .lineLimit(1)
     }
-    .padding(.vertical, 4)
+    .padding(.horizontal, 8)
+    .padding(.vertical, 6)
   }
 }
 
 private struct PermissionExplanationCard: View {
   let permission: PermissionDefinition
-  let summary: PermissionStatusSummary
+  let developerModeEnabled: Bool
   @Binding var linkStatus: SystemSettingsLinkStatus
 
   var body: some View {
@@ -424,47 +490,22 @@ private struct PermissionExplanationCard: View {
       ExplanationRow(title: "Why this matters", text: permission.whyItMatters)
       ExplanationRow(title: "What an app can do", text: permission.capability)
       ExplanationRow(title: "How to revoke it", text: permission.revokeHint)
-      PermissionStatusSummaryView(summary: summary)
 
-      Button {
-        SystemSettingsLinker.open(permission)
-      } label: {
-        Label("Open System Settings", systemImage: "gear")
-      }
-      .buttonStyle(.borderedProminent)
+      if developerModeEnabled {
+        Divider()
 
-      Picker("Link QA", selection: $linkStatus) {
-        ForEach(SystemSettingsLinkStatus.allCases) { status in
-          Text(status.rawValue).tag(status)
+        Picker("Link QA", selection: $linkStatus) {
+          ForEach(SystemSettingsLinkStatus.allCases) { status in
+            Text(status.rawValue).tag(status)
+          }
         }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: .infinity)
+
+        Text("Developer-only local QA state; it does not modify permissions or System Settings.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
       }
-      .pickerStyle(.segmented)
-      .frame(maxWidth: .infinity)
-
-      Text("Manual QA status is local runtime state only; it does not modify permissions or System Settings.")
-        .font(.caption)
-        .foregroundStyle(.secondary)
-    }
-  }
-}
-
-private struct PermissionStatusSummaryView: View {
-  let summary: PermissionStatusSummary
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text("Current Scan")
-        .font(.headline)
-
-      LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: 10)], alignment: .leading, spacing: 10) {
-        StatusCountBadge(title: "Granted", count: summary.granted, color: .green)
-        StatusCountBadge(title: "Denied", count: summary.denied, color: .orange)
-        StatusCountBadge(title: "Unknown", count: summary.unknown, color: .secondary)
-      }
-
-      Text(summary.hasKnownState ? "\(summary.total) apps scanned for this permission." : "No known grants or denials were found for this permission in the current scan.")
-        .font(.caption)
-        .foregroundStyle(.secondary)
     }
   }
 }
@@ -496,27 +537,6 @@ private struct StatusCountPill: View {
       .padding(.horizontal, 5)
       .padding(.vertical, 2)
       .background(color.opacity(0.12), in: Capsule())
-  }
-}
-
-private struct StatusCountBadge: View {
-  let title: String
-  let count: Int
-  let color: Color
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 2) {
-      Text(title)
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
-      Text("\(count)")
-        .font(.title3.weight(.semibold))
-        .monospacedDigit()
-        .foregroundStyle(color)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(10)
-    .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
   }
 }
 
@@ -567,53 +587,61 @@ private struct AppPermissionDetail: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
-      Text("Permission State")
+      Text("Selected App Permissions")
         .font(.title3.weight(.semibold))
 
-      ForEach([PermissionStatus.granted, .denied, .unknown], id: \.self) { status in
-        let grants = app.permissionGroups[status, default: []]
-        if !grants.isEmpty {
-          Text(status.rawValue.capitalized)
-            .font(.headline)
+      if isPermissionEvidenceUnavailable {
+        PermissionEvidenceLimitedNotice()
+      } else {
+        ForEach([PermissionStatus.granted, .denied, .unknown], id: \.self) { status in
+          let grants = app.permissionGroups[status, default: []]
+          if !grants.isEmpty {
+            Text(status.rawValue.capitalized)
+              .font(.headline)
 
-          ForEach(grants) { grant in
-            HStack(alignment: .top) {
-              VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 6) {
-                  Text(grant.permission.name)
-                    .font(.subheadline.weight(.semibold))
-                  if grant.isHighRiskGrant {
-                    Label("High-risk grant", systemImage: "exclamationmark.triangle.fill")
-                      .font(.caption.weight(.semibold))
-                      .foregroundStyle(.red)
+            ForEach(grants) { grant in
+              HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 5) {
+                  HStack(spacing: 6) {
+                    Text(grant.permission.name)
+                      .font(.subheadline.weight(.semibold))
+                    if grant.isHighRiskGrant {
+                      Label("High-risk grant", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.red)
+                    }
                   }
-                }
 
-                Text(reviewHint(for: grant))
-                  .font(.caption)
-                  .foregroundStyle(.secondary)
-
-                HStack(spacing: 8) {
-                  EvidenceKindBadge(kind: grant.evidenceKind)
-                  Text("Column: \(grant.authorizationColumn.rawValue)")
-                    .font(.caption2)
+                  Text(reviewHint(for: grant))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
+
+                  HStack(spacing: 8) {
+                    EvidenceKindBadge(kind: grant.evidenceKind)
+                    Text("Column: \(grant.authorizationColumn.rawValue)")
+                      .font(.caption2)
+                      .foregroundStyle(.secondary)
+                  }
+
+                  Text(grant.evidence)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
                 }
 
-                Text(grant.evidence)
-                  .font(.caption)
-                  .foregroundStyle(.secondary)
-                  .textSelection(.enabled)
+                Spacer()
+                StatusBadge(status: grant.status)
               }
-
-              Spacer()
-              StatusBadge(status: grant.status)
+              Divider()
             }
-            Divider()
           }
         }
       }
     }
+  }
+
+  private var isPermissionEvidenceUnavailable: Bool {
+    !app.permissions.isEmpty && app.permissions.allSatisfy { $0.evidenceKind.isDatabaseUnavailable }
   }
 
   private func reviewHint(for grant: PermissionGrant) -> String {
@@ -629,6 +657,23 @@ private struct AppPermissionDetail: View {
     case .unknown:
       return grant.statusLine
     }
+  }
+}
+
+private struct PermissionEvidenceLimitedNotice: View {
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Label("Permission evidence is limited", systemImage: "lock.shield")
+        .font(.subheadline.weight(.semibold))
+
+      Text("PermissionPilot cannot read the local TCC database yet, so per-app grants and denials are hidden instead of repeating unknown rows. Use the Full Disk Access prompt above to improve scan visibility.")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .padding(10)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
   }
 }
 
@@ -673,6 +718,8 @@ private struct BackgroundItemsView: View {
           .foregroundStyle(.secondary)
       }
 
+      BackgroundItemKindSummary(items: items)
+
       BackgroundItemControls(
         searchText: $searchText,
         kindFilter: $kindFilter,
@@ -685,16 +732,37 @@ private struct BackgroundItemsView: View {
       } else if filteredItems.isEmpty {
         ContentUnavailableView("No Matching Background Items", systemImage: "line.3.horizontal.decrease.circle")
       } else {
-        ForEach(filteredItems) { item in
-          Button {
-            selectedItem = item
-          } label: {
-            BackgroundItemRow(item: item, isSelected: selectedItem?.id == item.id)
+        VStack(spacing: 0) {
+          BackgroundItemTableHeader()
+
+          ForEach(filteredItems) { item in
+            Button {
+              selectedItem = item
+            } label: {
+              BackgroundItemRow(item: item, isSelected: selectedItem?.id == item.id)
+            }
+            .buttonStyle(.plain)
+
+            if item.id != filteredItems.last?.id {
+              Divider()
+            }
           }
-          .buttonStyle(.plain)
-          Divider()
+        }
+        .overlay {
+          RoundedRectangle(cornerRadius: 8)
+            .stroke(.quaternary)
+        }
+
+        if let selectedItem {
+          BackgroundItemDetail(item: selectedItem)
         }
       }
+    }
+    .task {
+      reconcileSelectedItem()
+    }
+    .onChange(of: filteredItems.map(\.id)) {
+      reconcileSelectedItem()
     }
   }
 
@@ -705,6 +773,48 @@ private struct BackgroundItemsView: View {
       staleOnly: staleOnly,
       sortOrder: sortOrder
     ).apply(to: items)
+  }
+
+  private func reconcileSelectedItem() {
+    guard let selectedItem else {
+      self.selectedItem = filteredItems.first
+      return
+    }
+
+    if let refreshedItem = filteredItems.first(where: { $0.id == selectedItem.id }) {
+      self.selectedItem = refreshedItem
+      return
+    }
+
+    self.selectedItem = filteredItems.first
+  }
+}
+
+private struct BackgroundItemKindSummary: View {
+  let items: [BackgroundItem]
+
+  var body: some View {
+    if !items.isEmpty {
+      LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), spacing: 8)], alignment: .leading, spacing: 8) {
+        ForEach(BackgroundItemKind.allCases, id: \.self) { kind in
+          let count = items.filter { $0.kind == kind }.count
+          if count > 0 {
+            HStack(spacing: 6) {
+              Text(kind.shortTitle)
+                .lineLimit(1)
+              Spacer(minLength: 4)
+              Text("\(count)")
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+            }
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 8))
+          }
+        }
+      }
+    }
   }
 }
 
@@ -765,35 +875,72 @@ private struct BackgroundItemControls: View {
   }
 }
 
+private struct BackgroundItemTableHeader: View {
+  var body: some View {
+    HStack(spacing: 12) {
+      Text("Item")
+        .frame(maxWidth: .infinity, alignment: .leading)
+      Text("Kind")
+        .frame(width: 118, alignment: .leading)
+      Text("Signal")
+        .frame(width: 92, alignment: .trailing)
+    }
+    .font(.caption.weight(.semibold))
+    .foregroundStyle(.secondary)
+    .padding(.horizontal, 10)
+    .padding(.vertical, 8)
+    .background(.quaternary.opacity(0.35))
+  }
+}
+
 private struct BackgroundItemRow: View {
   let item: BackgroundItem
   let isSelected: Bool
 
   var body: some View {
-    HStack(alignment: .top) {
+    HStack(alignment: .center, spacing: 12) {
       VStack(alignment: .leading, spacing: 4) {
         Text(item.label)
-          .font(.headline)
-        Text(item.kind.rawValue)
-          .font(.caption)
-          .foregroundStyle(.secondary)
+          .font(.subheadline.weight(.semibold))
+          .lineLimit(1)
         Text(item.executable ?? item.path)
           .font(.caption2)
           .foregroundStyle(.tertiary)
           .lineLimit(1)
           .textSelection(.enabled)
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
 
-      Spacer()
+      Text(item.kind.shortTitle)
+        .font(.caption.weight(.medium))
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+        .frame(width: 118, alignment: .leading)
 
-      if item.isPotentiallyStale {
-        Label("Potentially stale", systemImage: "exclamationmark.triangle")
-          .font(.caption)
-          .foregroundStyle(.orange)
-      }
+      BackgroundItemSignalBadge(item: item)
+        .frame(width: 92, alignment: .trailing)
     }
-    .padding(8)
+    .padding(.horizontal, 10)
+    .padding(.vertical, 8)
+    .contentShape(Rectangle())
     .background(isSelected ? Color.accentColor.opacity(0.10) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+  }
+}
+
+private struct BackgroundItemSignalBadge: View {
+  let item: BackgroundItem
+
+  var body: some View {
+    if item.isPotentiallyStale {
+      Label("Stale", systemImage: "exclamationmark.triangle")
+        .labelStyle(.titleAndIcon)
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.orange)
+    } else {
+      Text("OK")
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.green)
+    }
   }
 }
 
@@ -853,8 +1000,9 @@ private struct GuidanceCard: View {
         Button {
           SystemSettingsLinker.open(permission)
         } label: {
-          Label("Open Full Disk Access", systemImage: "internaldrive")
+          Label("Grant Full Disk Access", systemImage: "internaldrive")
         }
+        .buttonStyle(.borderedProminent)
       }
     }
     .padding(12)

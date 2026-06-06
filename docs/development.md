@@ -57,12 +57,14 @@ The app currently includes:
 - Typed TCC evidence states for missing/unreadable databases, no records, matched grants/denials, query failures, and modern versus legacy authorization columns.
 - First-run guidance for limited TCC visibility and empty scan results.
 - Educational permission catalog and sensitivity labels.
-- System Settings links for known Privacy & Security panes.
-- Runtime-only manual QA status controls for System Settings links.
+- A prominent Full Disk Access action when local TCC visibility is limited.
+- Developer Mode setting for runtime-only manual QA status controls for System Settings links.
+- Explicit clickable selections for permissions, scan summary apps, installed apps, and background items.
 - Conservative review-priority badges and evidence in app details.
 - LaunchAgent and LaunchDaemon scanning from common system and user locations.
 - Best-effort login item and background task scanning through `/usr/bin/sfltool dumpbtm`.
 - Privileged helper tool scanning from `/Library/PrivilegedHelperTools`.
+- Compact background item review with kind summaries, stale/OK signals, and selected-item detail.
 - Full and filtered Markdown and JSON report export.
 
 ## Local Planning
@@ -90,9 +92,13 @@ Manual QA for bundle changes:
 - Run `bash scripts/smoke-test-app-bundle.sh` to launch the bundle, trigger `Refresh Scan`, check for fresh crash reports, and quit the app.
 - Open `.build/app/PermissionPilot.app`.
 - Confirm the dashboard loads and refreshes.
-- Confirm System Settings links still open the expected Privacy & Security panes.
-- In each permission detail, mark the System Settings link as `Tested working` or `Tested failed` while checking links. This status is runtime-only UI state and is not persisted.
+- Confirm permission rows, scan summary apps, installed app rows, and background item rows can be selected.
+- Confirm the Full Disk Access action opens the expected Privacy & Security pane when TCC visibility is limited.
+- Open app Settings, enable Developer Mode, and confirm each permission detail exposes Link QA controls.
+- In Developer Mode, mark System Settings link status as `Tested working` or `Tested failed` while checking links. This status is runtime-only UI state and is not persisted.
 - Confirm first-run guidance appears when TCC data is unreadable or the scan has only unknown permission states.
+- Confirm selected-app permission evidence shows one limited-evidence notice when the TCC database is unreadable.
+- Confirm background items render as compact rows with kind summaries and selectable detail.
 - Confirm full and filtered Markdown and JSON reports can still be generated. Default save names include full/filtered scope and a UTC timestamp, for example `permissionpilot-full-report-20240101-000000.md`.
 
 ## Platform Caveats
