@@ -8,6 +8,7 @@ PermissionPilot has not shipped a release yet.
 - Configure a real Developer ID signing identity before distributing artifacts.
 - Run notarization and stapling manually until an automated artifact workflow is added.
 - Add an artifact workflow only after signing credentials can be stored safely.
+- Keep GitHub Release drafts artifact-free until the exact signed and notarized artifact is ready.
 - Confirm privacy and security docs match app behavior.
 
 ## App Bundle
@@ -67,6 +68,28 @@ spctl --assess --type execute --verbose=4 .build/app/PermissionPilot.app
 
 Do not attach release artifacts until signing, notarization, stapling, and verification have all passed for the exact artifact being published.
 
+## GitHub Release Draft
+
+Create GitHub Releases only from a reviewed, merged, and tagged commit on the default branch. Do not create a public release from an unmerged feature branch.
+
+Recommended draft flow for v0.1:
+
+```sh
+git switch main
+git pull --ff-only
+git tag -a v0.1.0 -m "PermissionPilot v0.1.0"
+git push origin v0.1.0
+gh release create v0.1.0 --draft --title "PermissionPilot v0.1.0" --notes-file docs/v0.1-release-notes.md
+```
+
+Before publishing the draft:
+
+- Confirm `docs/v0.1-release-notes.md` matches the exact tagged commit.
+- Attach only signed, notarized, stapled, and verified artifacts.
+- Include checksums for attached artifacts.
+- Confirm no exported local permission reports, app inventories, private logs, local-only planning notes, or unsigned rehearsal bundles are attached.
+- Publish only after the release checklist is complete.
+
 ## Release Checklist
 
 - Run required local checks.
@@ -80,9 +103,13 @@ Do not attach release artifacts until signing, notarization, stapling, and verif
 - Open `.build/app/PermissionPilot.app` and perform bundle manual QA.
 - Perform manual QA on supported macOS versions.
 - Confirm full and filtered Markdown/JSON exports save with scope and UTC timestamp in the default filename.
+- Confirm permission/sidebar rows, installed app rows, and background item rows are selectable.
+- Confirm Full Disk Access guidance uses one prominent System Settings action.
+- Enable Developer Mode in app Settings and manually test Link QA status controls.
 - Manually compare app signing identity rows with `codesign -dv --verbose=4 <app>`.
 - Manually compare the app's background item view with `sfltool dumpbtm` and common LaunchAgent/LaunchDaemon directories.
 - Manually review `/Library/PrivilegedHelperTools` helper flags for false positives.
 - Review permission-sensitive changes.
 - Create release notes.
-- Attach signed/notarized artifacts only after the signing process is documented.
+- Create a GitHub Release draft from the tagged default-branch commit.
+- Attach signed/notarized artifacts only after the signing process is documented and verified.

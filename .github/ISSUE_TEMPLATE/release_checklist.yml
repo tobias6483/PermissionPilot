@@ -1,0 +1,44 @@
+name: Release checklist
+description: Track release readiness without posting private local scan data.
+title: "[Release]: "
+labels: ["area:release", "release-checklist", "needs-triage"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: "Example: v0.1.0"
+    validations:
+      required: true
+  - type: checkboxes
+    id: local-checks
+    attributes:
+      label: Local checks
+      options:
+        - label: "`bash scripts/check-repo.sh` passed."
+        - label: "`swift build` passed."
+        - label: "`swift test` passed."
+        - label: "`bash scripts/smoke-test-app-bundle.sh` passed."
+  - type: checkboxes
+    id: app-qa
+    attributes:
+      label: App QA
+      options:
+        - label: "Dashboard rows can be selected for permissions, installed apps, and background items."
+        - label: "Full Disk Access guidance opens the expected System Settings pane."
+        - label: "Developer Mode exposes Link QA controls and they remain hidden by default."
+        - label: "Exports save full and filtered Markdown/JSON reports with expected filenames."
+  - type: checkboxes
+    id: release-artifacts
+    attributes:
+      label: Release artifacts
+      options:
+        - label: "Release notes match the tagged commit."
+        - label: "Attached artifacts are signed, notarized, stapled, and verified."
+        - label: "Checksums are included for attached artifacts."
+        - label: "No private scan exports, app inventories, logs, or local planning notes are attached."
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Keep notes high-level; do not paste private permission inventories or exported reports.

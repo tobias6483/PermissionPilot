@@ -6,9 +6,9 @@ It aims to help people understand which apps have sensitive local permissions, w
 
 ## Status
 
-PermissionPilot has an initial native SwiftUI macOS app scaffold. The current app can inventory installed apps, inspect code signing identity, show an educational permission catalog, label sensitivity, scan LaunchAgents, LaunchDaemons, login items, background tasks, and privileged helper tools, open relevant System Settings panes, perform best-effort local TCC record matching, show conservative review priorities, and export full or filtered local Markdown/JSON reports.
+PermissionPilot has an initial native SwiftUI macOS app scaffold. The current app can inventory installed apps, inspect code signing identity, show an educational permission catalog, label sensitivity, scan LaunchAgents, LaunchDaemons, login items, background tasks, and privileged helper tools, open Full Disk Access guidance when local TCC visibility is limited, perform best-effort local TCC record matching, show conservative review priorities, and export full or filtered local Markdown/JSON reports.
 
-TCC permission-state detection is intentionally conservative. If macOS does not allow the app to read the user's TCC database, or if no matching record exists, PermissionPilot shows `unknown` with evidence instead of guessing. First-run guidance explains these limits and may point to Full Disk Access for more visibility, but the app stays local-first and read-only.
+TCC permission-state detection is intentionally conservative. If macOS does not allow the app to read the user's TCC database, or if no matching record exists, PermissionPilot shows `unknown` with evidence instead of guessing. First-run guidance explains these limits and offers a single Full Disk Access action for more visibility, but the app stays local-first and read-only.
 
 ## v0.1 MVP
 
@@ -22,6 +22,8 @@ The planned v0.1 MVP is implemented in the current app:
 - Explain what each permission can allow an app to do.
 - Link directly to relevant Privacy & Security panes in System Settings.
 - Scan common LaunchAgents, LaunchDaemons, Login Items, background tasks, and privileged helper-tool locations.
+- Provide compact, selectable background item review with kind summaries and stale-signal details.
+- Hide manual System Settings link QA controls unless Developer Mode is enabled in app settings.
 - Export full or filtered local Markdown and JSON privacy reports.
 
 Some scanners remain intentionally best-effort because macOS controls access to TCC data and some background-service sources. In those cases PermissionPilot reports `unknown` or review-signal evidence instead of guessing.

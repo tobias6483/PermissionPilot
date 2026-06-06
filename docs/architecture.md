@@ -4,7 +4,8 @@ PermissionPilot currently ships as a Swift Package Manager executable target nam
 
 ## Current Shape
 
-- `DashboardView`: SwiftUI navigation, app list, permission explanations, background item summary, and export actions.
+- `PermissionPilotApp`: SwiftUI app entry point, command menu, Settings scene, and app-wide Developer Mode setting.
+- `DashboardView`: SwiftUI navigation, explicit row selection, app list, permission explanations, compact background item review, and export actions.
 - `DashboardStore`: Main actor state container for scan results.
 - `AppInventoryScanner`: Finds `.app` bundles in `/Applications` and `~/Applications`.
 - `CodeSignatureScanner`: Uses `/usr/bin/codesign` to inspect app signing identity metadata.
@@ -28,6 +29,7 @@ PermissionPilot currently ships as a Swift Package Manager executable target nam
 - Login Items scanning depends on undocumented `sfltool dumpbtm` output and should be treated as best-effort.
 - Privileged helper stale detection is heuristic and should be presented as a review signal.
 - The current app is distributed as a SwiftPM executable during development, not a signed `.app` bundle.
+- Developer Mode exposes local QA controls for System Settings links, but those controls are not part of the default user workflow and do not modify macOS settings.
 
 ## Future Separation Points
 
