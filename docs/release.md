@@ -1,17 +1,25 @@
 # Release Process
 
-PermissionPilot's current public alpha is the source-only GitHub prerelease `v0.1.0-alpha.2`. The next source-only prerelease candidate is `v0.1.0-alpha.3`.
+PermissionPilot's current downloadable alpha plan is an unsigned `.app.zip` prerelease with a SHA-256 checksum, matching the early artifact model used by sibling projects before Developer ID distribution is ready.
 
-Signed and notarized app artifacts are not attached until the Developer ID distribution workflow is complete.
+Signed and notarized DMG artifacts are not attached until the Developer ID distribution workflow is complete.
 
-## Before Signed v0.1 Artifacts
+## Artifact Policy
+
+- Source-only prereleases are allowed while app packaging is not ready.
+- Unsigned `.app.zip` prereleases are allowed for early technical testing when release notes clearly state that the artifact is unsigned, not notarized, and may trigger Gatekeeper warnings.
+- Signed and notarized DMG releases require the full Developer ID workflow.
+- Include SHA-256 checksums for every attached app artifact.
+- Confirm no exported local permission reports, app inventories, private logs, local-only planning notes, or unsigned rehearsal bundles outside the intended artifact are attached.
+- Confirm privacy and security docs match app behavior.
+
+## Before Signed v0.1 DMG Artifacts
 
 - Exercise the SwiftPM app bundle workflow on a clean checkout.
 - Configure a real Developer ID signing identity before distributing artifacts.
 - Run notarization and stapling manually until an automated artifact workflow is added.
 - Add an artifact workflow only after signing credentials can be stored safely.
-- Keep GitHub Release drafts artifact-free until the exact signed and notarized artifact is ready.
-- Confirm privacy and security docs match app behavior.
+- Keep signed DMG GitHub Release drafts artifact-free until the exact signed and notarized artifact is ready.
 
 ## App Bundle
 
@@ -68,29 +76,34 @@ xcrun stapler validate .build/app/PermissionPilot.app
 spctl --assess --type execute --verbose=4 .build/app/PermissionPilot.app
 ```
 
-Do not attach release artifacts until signing, notarization, stapling, and verification have all passed for the exact artifact being published.
+Do not attach signed/notarized DMG artifacts until signing, notarization, stapling, and verification have all passed for the exact artifact being published.
 
 ## GitHub Release Draft
 
 Create GitHub Releases only from a reviewed, merged, and tagged commit on the default branch. Do not create a public release from an unmerged feature branch.
 
-Recommended source-only prerelease flow, using `v0.1.0-alpha.3` as the next alpha example:
+Recommended unsigned app artifact prerelease flow, using `v0.1.0-alpha.4` as an alpha example:
 
 ```sh
 git switch main
 git pull --ff-only
-git tag -a v0.1.0-alpha.3 -m "PermissionPilot v0.1.0-alpha.3"
-git push origin v0.1.0-alpha.3
-gh release create v0.1.0-alpha.3 --prerelease --title "PermissionPilot v0.1.0-alpha.3" --notes-file docs/v0.1-release-notes.md
+VERSION=0.1.0 BUILD_NUMBER=4 bash scripts/build-app-bundle.sh
+mkdir -p dist/artifacts
+ditto -c -k --keepParent .build/app/PermissionPilot.app dist/artifacts/PermissionPilot.app.zip
+shasum -a 256 dist/artifacts/PermissionPilot.app.zip > dist/artifacts/PermissionPilot.app.zip.sha256
+git tag -a v0.1.0-alpha.4 -m "PermissionPilot v0.1.0-alpha.4"
+git push origin v0.1.0-alpha.4
+gh release create v0.1.0-alpha.4 --prerelease --title "PermissionPilot v0.1.0-alpha.4" --notes-file docs/v0.1-release-notes.md dist/artifacts/PermissionPilot.app.zip dist/artifacts/PermissionPilot.app.zip.sha256
 ```
 
-For source-only prereleases:
+For unsigned app artifact prereleases:
 
-- Do not attach unsigned local rehearsal bundles.
-- Confirm GitHub's automatically generated source archive is the only downloadable artifact.
+- Attach only the intended `.app.zip` and matching `.sha256`.
+- Make the unsigned and not-notarized status explicit in GitHub release notes.
+- Confirm the checksum file validates the uploaded zip before publishing.
 - Make the prerelease status explicit in GitHub.
 
-Before publishing any release with app artifacts:
+Before publishing any signed release with app artifacts:
 
 - Confirm `docs/v0.1-release-notes.md` matches the exact tagged commit.
 - Attach only signed, notarized, stapled, and verified artifacts.
