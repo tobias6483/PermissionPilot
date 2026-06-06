@@ -7,6 +7,7 @@ All notable changes to PermissionPilot will be documented in this file.
 ## Changed
 
 - Clarified documentation for app-scoped permissions, global/system Privacy & Security settings, installed app identity, and background execution evidence.
+- Kept global/system Privacy & Security settings out of per-app permission summaries, app lists, and app detail panes.
 
 ## v0.1.0-alpha.3 - 2026-06-06
 

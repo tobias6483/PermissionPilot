@@ -203,6 +203,20 @@ final class InstalledAppTests: XCTestCase {
     XCTAssertTrue(grant.evidence.contains("not exposed as a per-app TCC grant"))
   }
 
+  func testSystemSettingSummariesDoNotCountAppsAsUnavailable() {
+    let permission = PermissionCatalog.all.first { $0.id == "filevault" }!
+    let apps = [
+      makeApp(name: "One", grants: []),
+      makeApp(name: "Two", grants: [])
+    ]
+
+    let summary = PermissionStatusSummary(permission: permission, apps: apps)
+
+    XCTAssertEqual(summary.total, 0)
+    XCTAssertEqual(summary.unavailable, 0)
+    XCTAssertEqual(summary.notRecorded, 0)
+  }
+
   private func makeApp(
     name: String,
     bundleIdentifier: String? = nil,
