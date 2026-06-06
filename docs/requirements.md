@@ -7,11 +7,12 @@
 | Native SwiftUI macOS app | Implemented | SwiftPM executable app scaffold. |
 | Installed app inventory | Implemented | Scans `/Applications` and `~/Applications` with bundle metadata where available. |
 | App signing identity | Implemented | Uses `codesign` to inspect signature status, Team ID, signing identifier, and authority chain. |
-| TCC permission overview | Implemented with OS limits | Best-effort local TCC record matching for known services when macOS allows database access; unreadable data is marked unavailable and readable no-match data is marked not recorded. |
+| TCC permission overview | Implemented with OS limits | Best-effort local TCC record matching for known services when macOS allows database access; unreadable data is marked unavailable and readable no-match data is marked not recorded. Current known-service coverage includes Location, Browser Passkey Access, Files & Folders, Photos, Full Disk Access, Home, Calendars, Contacts, Media & Apple Music, Reminders, App Management, Automation, Motion & Fitness, Bluetooth, Focus, Camera, Local Network, Microphone, Screen Recording, System Audio Recording, Keyboard Monitoring, Remote Desktop, Speech Recognition, Accessibility, and Developer Tools. |
+| Global Privacy & Security categories | Implemented as not app-scoped | Includes Sensitive Content Warning, Blocked Contacts, Analytics & Improvements, Apple Advertising, Apple Intelligence Report, FileVault, Background Security Improvements, Blocked System Software, and System-Wide Settings Protection without pretending they are per-app TCC grants. |
 | TCC evidence model | Implemented | Distinguishes database unreadable, database missing, no record, matched granted/denied/unknown, unmapped service, query failure, authorization-column source, and Apple Events target identifiers when available. |
 | First-run and empty-state guidance | Implemented | Explains unreadable TCC data, all-unknown permission states, no apps found, and no background items found without pressuring the user to grant access. |
 | Permission status summaries | Implemented | Shows granted, denied, unknown, unavailable, and not-recorded app counts in the sidebar for each permission in the current scan. |
-| Dashboard selection behavior | Implemented | Permission rows, scan summary apps, installed apps, and background items are explicit clickable selections with visible selected state. |
+| Dashboard selection behavior | Implemented | Permission rows, scan summary apps, scan summary background items, scan summary stale items, installed apps, and background items are explicit clickable selections with visible selected state. |
 | Sensitivity labels | Implemented | High, medium, and low categories. |
 | App detail evidence view | Implemented | Groups recorded permissions by granted, denied, unknown, and unavailable; highlights high-sensitivity grants; shows concise status lines plus detailed evidence; and collapses all-not-recorded apps into a neutral empty state. |
 | Limited TCC evidence state | Implemented | When all selected-app permission evidence is unavailable, the UI shows one concise limited-evidence notice instead of repeating unknown rows. |
@@ -38,7 +39,7 @@ Implemented MVP scope:
 
 - Installed app inventory with known permission states where macOS allows local inspection.
 - Signing identity metadata including signature status, Team ID, signing identifier, and authority chain.
-- High-sensitivity permission highlighting for Screen Recording, Accessibility, and Full Disk Access.
+- High-sensitivity permission highlighting for Screen Recording, System Audio Recording, Accessibility, Full Disk Access, Files & Folders, App Management, Keyboard Monitoring, Developer Tools, Remote Desktop, FileVault, Background Security Improvements, and Blocked System Software.
 - Permission evidence grouped by granted, denied, unknown, unavailable, and not-recorded states.
 - Conservative review-priority signals without malware verdicts.
 - Permission explanations and System Settings deep links.

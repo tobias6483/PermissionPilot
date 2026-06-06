@@ -1,6 +1,6 @@
 # Release Process
 
-PermissionPilot's current public alpha is the source-only GitHub prerelease `v0.1.0-alpha.2`.
+PermissionPilot's current public alpha is the source-only GitHub prerelease `v0.1.0-alpha.2`. The next source-only prerelease candidate is `v0.1.0-alpha.3`.
 
 Signed and notarized app artifacts are not attached until the Developer ID distribution workflow is complete.
 
@@ -74,14 +74,14 @@ Do not attach release artifacts until signing, notarization, stapling, and verif
 
 Create GitHub Releases only from a reviewed, merged, and tagged commit on the default branch. Do not create a public release from an unmerged feature branch.
 
-Recommended source-only prerelease flow, using `v0.1.0-alpha.2` as the current alpha example:
+Recommended source-only prerelease flow, using `v0.1.0-alpha.3` as the next alpha example:
 
 ```sh
 git switch main
 git pull --ff-only
-git tag -a v0.1.0-alpha.2 -m "PermissionPilot v0.1.0-alpha.2"
-git push origin v0.1.0-alpha.2
-gh release create v0.1.0-alpha.2 --prerelease --title "PermissionPilot v0.1.0-alpha.2" --notes-file docs/v0.1-release-notes.md
+git tag -a v0.1.0-alpha.3 -m "PermissionPilot v0.1.0-alpha.3"
+git push origin v0.1.0-alpha.3
+gh release create v0.1.0-alpha.3 --prerelease --title "PermissionPilot v0.1.0-alpha.3" --notes-file docs/v0.1-release-notes.md
 ```
 
 For source-only prereleases:
@@ -112,6 +112,10 @@ Before publishing any release with app artifacts:
 - Perform manual QA on supported macOS versions.
 - Confirm full and filtered Markdown/JSON exports save with scope and UTC timestamp in the default filename.
 - Confirm permission/sidebar rows, installed app rows, and background item rows are selectable.
+- Confirm the grouped permission sidebar shows audited TCC-backed categories, global/system categories, and scan summary destinations.
+- Confirm scan summary `background items` and `potentially stale` rows open the background item workflow in the content column.
+- Confirm user and system TCC database evidence is reported without exporting private rows.
+- Confirm global Privacy & Security categories are marked not app-scoped rather than presented as app grants.
 - Confirm Full Disk Access guidance uses one prominent System Settings action.
 - Enable Developer Mode in app Settings and manually test Link QA status controls.
 - Manually compare app signing identity rows with `codesign -dv --verbose=4 <app>`.

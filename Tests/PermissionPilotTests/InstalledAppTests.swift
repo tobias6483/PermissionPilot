@@ -3,14 +3,16 @@ import XCTest
 
 final class InstalledAppTests: XCTestCase {
   func testHighestSensitivityIgnoresUnknownPermissions() {
+    let screenRecording = PermissionCatalog.all.first { $0.id == "screen-recording" }!
+    let microphone = PermissionCatalog.all.first { $0.id == "microphone" }!
     let app = InstalledApp(
       id: "example",
       name: "Example",
       bundleIdentifier: "com.example.App",
       path: "/Applications/Example.app",
       permissions: [
-        PermissionGrant(permission: PermissionCatalog.all[0], status: .notRecorded, evidence: "No record."),
-        PermissionGrant(permission: PermissionCatalog.all[3], status: .granted, evidence: "Matched record.")
+        PermissionGrant(permission: screenRecording, status: .notRecorded, evidence: "No record."),
+        PermissionGrant(permission: microphone, status: .granted, evidence: "Matched record.")
       ]
     )
 
@@ -19,7 +21,7 @@ final class InstalledAppTests: XCTestCase {
 
   func testAppListFilterCombinesPermissionStatusSignatureSearchAndSort() {
     let screenRecording = PermissionCatalog.all[0]
-    let microphone = PermissionCatalog.all[3]
+    let microphone = PermissionCatalog.all.first { $0.id == "microphone" }!
     let signed = CodeSignatureInfo(
       isSigned: true,
       teamIdentifier: "TEAMID",
@@ -87,7 +89,7 @@ final class InstalledAppTests: XCTestCase {
 
   func testPermissionStatusSummaryCountsSelectedPermissionStates() {
     let screenRecording = PermissionCatalog.all[0]
-    let microphone = PermissionCatalog.all[3]
+    let microphone = PermissionCatalog.all.first { $0.id == "microphone" }!
     let apps = [
       makeApp(
         name: "Granted",
@@ -189,6 +191,16 @@ final class InstalledAppTests: XCTestCase {
     )
 
     XCTAssertEqual(DashboardGuidanceEvaluator.guidance(apps: [app], backgroundItems: [BackgroundItem(id: "agent", kind: .launchAgent, label: "Agent", path: "/Library/LaunchAgents/agent.plist", executable: nil, isPotentiallyStale: false)]), [])
+  }
+
+  func testSystemPrivacySettingsScannerMarksGlobalSettingsAsNotAppScoped() {
+    let permission = PermissionCatalog.all.first { $0.id == "analytics-improvements" }!
+    let grant = SystemPrivacySettingsScanner().grant(for: permission)
+
+    XCTAssertEqual(grant.status, .unavailable)
+    XCTAssertEqual(grant.evidenceKind, .systemSettingNotAppScoped)
+    XCTAssertEqual(grant.authorizationColumn, .unavailable)
+    XCTAssertTrue(grant.evidence.contains("not exposed as a per-app TCC grant"))
   }
 
   private func makeApp(
