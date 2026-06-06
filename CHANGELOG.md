@@ -6,6 +6,14 @@ All notable changes to PermissionPilot will be documented in this file.
 
 No unreleased changes yet.
 
+## v0.1.0-alpha.2 - 2026-06-06
+
+- Split TCC permission states so readable no-record evidence is `notRecorded`, unreadable database evidence is `unavailable`, and `unknown` is reserved for matched records with unrecognized authorization values.
+- Collapsed selected-app permission details with only not-recorded permissions into one neutral empty state instead of repeating unknown rows.
+- Added Apple Events target identifiers to matched automation evidence when TCC records expose them.
+- Updated permission summaries and report exports to include unknown, unavailable, and not-recorded counts separately.
+- Clarified app list sensitivity badges as access sensitivity rather than app trust or legitimacy.
+
 ## v0.1.0-alpha.1 - 2026-06-06
 
 - Reworked dashboard interactions so permission rows, scan summary apps, installed apps, and background items are explicit clickable selections.

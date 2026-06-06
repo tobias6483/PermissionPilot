@@ -32,8 +32,8 @@ enum ReportExporter {
       "",
       "## Permission Summary",
       "",
-      "| Permission | Sensitivity | Granted | Denied | Unknown |",
-      "| --- | --- | --- | --- | --- |"
+      "| Permission | Sensitivity | Granted | Denied | Unknown | Unavailable | Not recorded |",
+      "| --- | --- | --- | --- | --- | --- | --- |"
     ]
 
     if report.scope == .filtered {
@@ -44,7 +44,7 @@ enum ReportExporter {
     }
 
     for permissionSummary in summary.permissionSummaries {
-      lines.append("| \(permissionSummary.name) | \(permissionSummary.sensitivity.rawValue) | \(permissionSummary.granted) | \(permissionSummary.denied) | \(permissionSummary.unknown) |")
+      lines.append("| \(permissionSummary.name) | \(permissionSummary.sensitivity.rawValue) | \(permissionSummary.granted) | \(permissionSummary.denied) | \(permissionSummary.unknown) | \(permissionSummary.unavailable) | \(permissionSummary.notRecorded) |")
     }
 
     lines += [
@@ -69,7 +69,7 @@ enum ReportExporter {
       lines.append("| --- | --- | --- | --- | --- | --- |")
 
       for grant in app.permissions {
-        lines.append("| \(grant.permission.name) | \(grant.permission.sensitivity.rawValue) | \(grant.status.rawValue) | \(grant.evidenceKind.title) | \(grant.authorizationColumn.rawValue) | \(grant.evidence) |")
+        lines.append("| \(grant.permission.name) | \(grant.permission.sensitivity.rawValue) | \(grant.status.displayName) | \(grant.evidenceKind.title) | \(grant.authorizationColumn.rawValue) | \(grant.evidence) |")
       }
 
       lines.append("")
@@ -90,7 +90,7 @@ enum ReportExporter {
     }
 
     lines.append("")
-    lines.append("Note: Unknown permission states mean macOS did not expose that state to this MVP scanner. Review priority is an audit signal, not a malware verdict.")
+    lines.append("Note: Not recorded means readable TCC data did not contain a matching grant or denial for that app and permission. Unknown means a matching record exists but PermissionPilot could not interpret its authorization value. Review priority is an audit signal, not a malware verdict.")
 
     return lines.joined(separator: "\n")
   }

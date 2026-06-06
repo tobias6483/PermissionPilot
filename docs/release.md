@@ -1,6 +1,6 @@
 # Release Process
 
-PermissionPilot's first public release is the source-only GitHub prerelease `v0.1.0-alpha.1`.
+PermissionPilot's current public alpha is the source-only GitHub prerelease `v0.1.0-alpha.2`.
 
 Signed and notarized app artifacts are not attached until the Developer ID distribution workflow is complete.
 
@@ -74,14 +74,14 @@ Do not attach release artifacts until signing, notarization, stapling, and verif
 
 Create GitHub Releases only from a reviewed, merged, and tagged commit on the default branch. Do not create a public release from an unmerged feature branch.
 
-Recommended source-only prerelease flow for `v0.1.0-alpha.1`:
+Recommended source-only prerelease flow, using `v0.1.0-alpha.2` as the current alpha example:
 
 ```sh
 git switch main
 git pull --ff-only
-git tag -a v0.1.0-alpha.1 -m "PermissionPilot v0.1.0-alpha.1"
-git push origin v0.1.0-alpha.1
-gh release create v0.1.0-alpha.1 --prerelease --title "PermissionPilot v0.1.0-alpha.1" --notes-file docs/v0.1-release-notes.md
+git tag -a v0.1.0-alpha.2 -m "PermissionPilot v0.1.0-alpha.2"
+git push origin v0.1.0-alpha.2
+gh release create v0.1.0-alpha.2 --prerelease --title "PermissionPilot v0.1.0-alpha.2" --notes-file docs/v0.1-release-notes.md
 ```
 
 For source-only prereleases:

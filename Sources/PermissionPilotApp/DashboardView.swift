@@ -156,6 +156,7 @@ struct DashboardView: View {
         if let permission = store.selectedPermission {
           PermissionExplanationCard(
             permission: permission,
+            summary: PermissionStatusSummary(permission: permission, apps: store.apps),
             developerModeEnabled: developerModeEnabled,
             linkStatus: bindingForSystemSettingsStatus(permission)
           )
@@ -334,7 +335,7 @@ private struct PermissionSidebarRow: View {
     .padding(.horizontal, 8)
     .padding(.vertical, 6)
     .contentShape(Rectangle())
-    .background(isSelected ? Color.accentColor.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+    .background(isSelected ? Color.primary.opacity(0.06) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
   }
 }
 
@@ -406,13 +407,20 @@ private struct AppListControls: View {
   }
 
   private var statusControl: some View {
-    Picker("Status", selection: $permissionStatusFilter) {
-      ForEach(PermissionStatusFilter.allCases) { filter in
-        Text(filter.rawValue).tag(filter)
+    HStack(spacing: 6) {
+      Text("Status")
+        .foregroundStyle(.secondary)
+
+      Picker("Status", selection: $permissionStatusFilter) {
+        ForEach(PermissionStatusFilter.allCases) { filter in
+          Text(filter.rawValue).tag(filter)
+        }
       }
+      .pickerStyle(.menu)
+      .labelsHidden()
+      .frame(width: 150)
     }
-    .pickerStyle(.segmented)
-    .frame(width: 260)
+    .font(.body)
   }
 
   private var signatureControl: some View {
@@ -447,12 +455,12 @@ private struct AppListRow: View {
           .lineLimit(1)
         Spacer()
 
-        if let selectedPermission, let grant = app.grant(for: selectedPermission) {
+        if let selectedPermission, let grant = app.grant(for: selectedPermission), !grant.evidenceKind.isDatabaseUnavailable {
           StatusBadge(status: grant.status)
         }
 
         ReviewPriorityBadge(priority: app.reviewPriorityAssessment.priority)
-        SensitivityBadge(sensitivity: app.highestSensitivity)
+        AppAccessBadge(sensitivity: app.highestSensitivity)
       }
 
       Text(app.bundleIdentifier ?? "No bundle identifier")
@@ -475,6 +483,7 @@ private struct AppListRow: View {
 
 private struct PermissionExplanationCard: View {
   let permission: PermissionDefinition
+  let summary: PermissionStatusSummary
   let developerModeEnabled: Bool
   @Binding var linkStatus: SystemSettingsLinkStatus
 
@@ -485,6 +494,15 @@ private struct PermissionExplanationCard: View {
           .font(.title2.weight(.semibold))
           .lineLimit(1)
         SensitivityBadge(sensitivity: permission.sensitivity)
+      }
+
+      if summary.unavailable > 0 {
+        Label("\(summary.unavailable) apps unavailable until TCC data can be read", systemImage: "lock.shield")
+          .font(.caption.weight(.semibold))
+          .foregroundStyle(.secondary)
+          .padding(.horizontal, 8)
+          .padding(.vertical, 5)
+          .background(.quaternary.opacity(0.6), in: Capsule())
       }
 
       ExplanationRow(title: "Why this matters", text: permission.whyItMatters)
@@ -518,9 +536,15 @@ private struct StatusCountStrip: View {
     HStack(spacing: compact ? 4 : 8) {
       StatusCountPill(count: summary.granted, color: .green)
       StatusCountPill(count: summary.denied, color: .orange)
-      StatusCountPill(count: summary.unknown, color: .secondary)
+      if summary.unknown > 0 {
+        StatusCountPill(count: summary.unknown, color: .purple)
+      }
+      if summary.unavailable > 0 {
+        StatusCountPill(count: summary.unavailable, color: .red)
+      }
+      StatusCountPill(count: summary.notRecorded, color: .secondary)
     }
-    .accessibilityLabel("\(summary.granted) granted, \(summary.denied) denied, \(summary.unknown) unknown")
+    .accessibilityLabel("\(summary.granted) granted, \(summary.denied) denied, \(summary.unknown) unknown, \(summary.unavailable) unavailable, \(summary.notRecorded) not recorded")
   }
 }
 
@@ -592,11 +616,13 @@ private struct AppPermissionDetail: View {
 
       if isPermissionEvidenceUnavailable {
         PermissionEvidenceLimitedNotice()
+      } else if recordedPermissions.isEmpty {
+        PermissionEvidenceEmptyNotice()
       } else {
-        ForEach([PermissionStatus.granted, .denied, .unknown], id: \.self) { status in
-          let grants = app.permissionGroups[status, default: []]
+        ForEach([PermissionStatus.granted, .denied, .unknown, .unavailable], id: \.self) { status in
+          let grants = recordedPermissionsByStatus[status, default: []]
           if !grants.isEmpty {
-            Text(status.rawValue.capitalized)
+            Text(status.displayName)
               .font(.headline)
 
             ForEach(grants) { grant in
@@ -644,6 +670,22 @@ private struct AppPermissionDetail: View {
     !app.permissions.isEmpty && app.permissions.allSatisfy { $0.evidenceKind.isDatabaseUnavailable }
   }
 
+  private var recordedPermissions: [PermissionGrant] {
+    app.permissions.filter { $0.status != .notRecorded }
+  }
+
+  private var recordedPermissionsByStatus: [PermissionStatus: [PermissionGrant]] {
+    Dictionary(grouping: recordedPermissions, by: \.status)
+      .mapValues { grants in
+        grants.sorted {
+          if $0.permission.sensitivity == $1.permission.sensitivity {
+            return $0.permission.name.localizedCaseInsensitiveCompare($1.permission.name) == .orderedAscending
+          }
+          return $0.permission.sensitivity < $1.permission.sensitivity
+        }
+      }
+  }
+
   private func reviewHint(for grant: PermissionGrant) -> String {
     if grant.isHighRiskGrant {
       return "Review next: confirm this app still needs \(grant.permission.name)."
@@ -654,6 +696,10 @@ private struct AppPermissionDetail: View {
       return "Review when auditing apps that actively use this capability."
     case .denied:
       return "Denied record found; usually lower priority unless unexpected."
+    case .notRecorded:
+      return "No recorded grant or denial was found for this permission."
+    case .unavailable:
+      return grant.statusLine
     case .unknown:
       return grant.statusLine
     }
@@ -667,6 +713,27 @@ private struct PermissionEvidenceLimitedNotice: View {
         .font(.subheadline.weight(.semibold))
 
       Text("PermissionPilot cannot read the local TCC database yet, so per-app grants and denials are hidden instead of repeating unknown rows. Use the Full Disk Access prompt above to improve scan visibility.")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+
+      Text("Current selected-app permission state: Unavailable")
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+    }
+    .padding(10)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
+  }
+}
+
+private struct PermissionEvidenceEmptyNotice: View {
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Label("No recorded permissions", systemImage: "checkmark.circle")
+        .font(.subheadline.weight(.semibold))
+
+      Text("Readable TCC data does not contain recorded grants or denials for this app.")
         .font(.caption)
         .foregroundStyle(.secondary)
         .fixedSize(horizontal: false, vertical: true)
@@ -1067,6 +1134,27 @@ private struct ReviewPriorityBadge: View {
   }
 }
 
+private struct AppAccessBadge: View {
+  let sensitivity: Sensitivity
+
+  var body: some View {
+    Text("\(sensitivity.rawValue) access")
+      .font(.caption.weight(.semibold))
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .background(color.opacity(0.14), in: Capsule())
+      .foregroundStyle(color)
+  }
+
+  private var color: Color {
+    switch sensitivity {
+    case .high: .red
+    case .medium: .orange
+    case .low: .green
+    }
+  }
+}
+
 private struct EvidenceKindBadge: View {
   let kind: TCCEvidenceKind
 
@@ -1083,7 +1171,7 @@ private struct StatusBadge: View {
   let status: PermissionStatus
 
   var body: some View {
-    Text(status.rawValue.capitalized)
+    Text(status.displayName)
       .font(.caption.weight(.medium))
       .padding(.horizontal, 8)
       .padding(.vertical, 4)

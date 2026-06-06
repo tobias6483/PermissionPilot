@@ -14,7 +14,7 @@ struct TCCScanResult {
     guard let services = TCCServiceMap.servicesByPermissionID[permission.id] else {
       return PermissionGrant(
         permission: permission,
-        status: .unknown,
+        status: .unavailable,
         evidence: "No TCC service mapping exists for this permission yet.",
         evidenceKind: .serviceUnmapped,
         authorizationColumn: authorizationColumn
@@ -24,7 +24,7 @@ struct TCCScanResult {
     guard !records.isEmpty else {
       return PermissionGrant(
         permission: permission,
-        status: .unknown,
+        status: evidenceKind.isDatabaseUnavailable ? .unavailable : .notRecorded,
         evidence: evidence,
         evidenceKind: evidenceKind,
         authorizationColumn: authorizationColumn
@@ -38,8 +38,8 @@ struct TCCScanResult {
     guard !matched.isEmpty else {
       return PermissionGrant(
         permission: permission,
-        status: .unknown,
-        evidence: "No matching TCC record was found for this app.",
+        status: .notRecorded,
+        evidence: "Readable TCC data does not contain a matching record for this app and permission.",
         evidenceKind: .noRecordFound,
         authorizationColumn: authorizationColumn
       )
@@ -53,14 +53,25 @@ struct TCCScanResult {
       kind = .matchedGranted
     case .denied:
       kind = .matchedDenied
+    case .notRecorded:
+      kind = .noRecordFound
+    case .unavailable:
+      kind = evidenceKind
     case .unknown:
       kind = .matchedUnknown
     }
 
+    let automationTargets = matched
+      .compactMap(\.indirectObjectIdentifier)
+      .filter { !$0.isEmpty && $0 != "UNUSED" }
+      .uniqued()
+      .joined(separator: ", ")
+    let targetEvidence = automationTargets.isEmpty ? "" : " Targets: \(automationTargets)."
+
     return PermissionGrant(
       permission: permission,
       status: status,
-      evidence: "Matched TCC service record: \(serviceList). Authorization column: \(authorizationColumn.rawValue).",
+      evidence: "Matched TCC service record: \(serviceList). Authorization column: \(authorizationColumn.rawValue).\(targetEvidence)",
       evidenceKind: kind,
       authorizationColumn: authorizationColumn
     )
@@ -72,16 +83,42 @@ struct TCCAuthorizationRecord: Hashable {
   let client: String
   let clientType: Int?
   let authorizationValue: Int?
+  var indirectObjectIdentifier: String? = nil
   var authorizationColumn: TCCAuthorizationColumn = .unknown
 
   var status: PermissionStatus {
-    switch authorizationValue {
-    case 1, 2:
-      return .granted
-    case 0:
-      return .denied
-    default:
-      return .unknown
+    switch authorizationColumn {
+    case .authValue:
+      switch authorizationValue {
+      case 2, 3:
+        return .granted
+      case 0:
+        return .denied
+      case 1:
+        return .unknown
+      default:
+        return .unknown
+      }
+    case .allowed:
+      switch authorizationValue {
+      case 1:
+        return .granted
+      case 0:
+        return .denied
+      default:
+        return .unknown
+      }
+    case .unavailable:
+      return .unavailable
+    case .unknown:
+      switch authorizationValue {
+      case 2:
+        return .granted
+      case 0:
+        return .denied
+      default:
+        return .unknown
+      }
     }
   }
 
@@ -91,10 +128,10 @@ struct TCCAuthorizationRecord: Hashable {
     }
 
     if clientType == 1 {
-      return client == appPath || appPath.hasPrefix(client)
+      return client == appPath
     }
 
-    return client == bundleIdentifier || client == appPath || appPath.hasPrefix(client)
+    return client == bundleIdentifier || client == appPath
   }
 }
 
@@ -147,7 +184,8 @@ struct TCCDatabaseScanner: TCCDatabaseScanning {
     }
 
     let clientTypeColumn = columns.contains("client_type") ? "client_type" : "NULL"
-    let query = "SELECT service, client, \(clientTypeColumn), \(valueColumn) FROM access;"
+    let indirectObjectIdentifierColumn = columns.contains("indirect_object_identifier") ? "indirect_object_identifier" : "NULL"
+    let query = "SELECT service, client, \(clientTypeColumn), \(valueColumn), \(indirectObjectIdentifierColumn) FROM access;"
     let recordsResult = runSQLite(arguments: ["-tabs", databaseURL.path, query])
 
     guard recordsResult.exitCode == 0 else {
@@ -194,6 +232,7 @@ struct TCCDatabaseScanner: TCCDatabaseScanning {
           client: String(fields[1]),
           clientType: Int(fields[2]),
           authorizationValue: Int(fields[3]),
+          indirectObjectIdentifier: fields.count > 4 ? String(fields[4]) : nil,
           authorizationColumn: authorizationColumn
         )
       }
