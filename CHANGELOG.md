@@ -4,7 +4,9 @@ All notable changes to PermissionPilot will be documented in this file.
 
 ## Unreleased
 
-No unreleased changes yet.
+## Changed
+
+- Clarified documentation for app-scoped permissions, global/system Privacy & Security settings, installed app identity, and background execution evidence.
 
 ## v0.1.0-alpha.3 - 2026-06-06
 

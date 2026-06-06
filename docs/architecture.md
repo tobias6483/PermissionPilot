@@ -21,6 +21,8 @@ PermissionPilot currently ships as a Swift Package Manager executable target nam
 - Scanners should report what they can inspect and why a value may be unknown.
 - UI code should not directly parse system files.
 - Export code should be explicit about included fields.
+- App-scoped TCC permissions, global/system Privacy & Security settings, app identity, and background execution items are separate evidence channels.
+- Global/system settings should not be displayed as per-app grants or app-row status badges.
 - Any privileged helper or background component must be treated as a separate reviewed subsystem.
 
 ## Current Limitations
