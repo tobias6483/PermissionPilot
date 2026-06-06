@@ -84,6 +84,7 @@ enum PermissionEvidenceSource: String, Codable, Hashable {
 
 enum PermissionStatusFilter: String, Codable, CaseIterable, Identifiable {
   case any = "Any"
+  case recorded = "Recorded"
   case granted = "Granted"
   case denied = "Denied"
   case notRecorded = "Not Recorded"
@@ -94,12 +95,23 @@ enum PermissionStatusFilter: String, Codable, CaseIterable, Identifiable {
 
   var status: PermissionStatus? {
     switch self {
-    case .any: nil
+    case .any, .recorded: nil
     case .granted: .granted
     case .denied: .denied
     case .notRecorded: .notRecorded
     case .unavailable: .unavailable
     case .unknown: .unknown
+    }
+  }
+
+  func includes(_ status: PermissionStatus) -> Bool {
+    switch self {
+    case .any:
+      return true
+    case .recorded:
+      return status != .notRecorded
+    case .granted, .denied, .notRecorded, .unavailable, .unknown:
+      return self.status == status
     }
   }
 }
@@ -505,14 +517,10 @@ struct AppListFilter: Equatable {
     }
 
     guard let grant = app.grant(for: permission) else {
-      return false
+      return permissionStatus.includes(.notRecorded)
     }
 
-    guard let requiredStatus = permissionStatus.status else {
-      return true
-    }
-
-    return grant.status == requiredStatus
+    return permissionStatus.includes(grant.status)
   }
 
   private func matchesSignature(_ app: InstalledApp) -> Bool {

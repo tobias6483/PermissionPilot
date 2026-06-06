@@ -93,6 +93,7 @@ Manual QA for bundle changes:
 - Open `.build/app/PermissionPilot.app`.
 - Confirm the dashboard loads and refreshes.
 - Confirm permission rows, scan summary apps, installed app rows, and background item rows can be selected.
+- Confirm selecting an app-scoped permission defaults the app list to recorded states and status sorting, with `Any` still available to show not-recorded apps.
 - Confirm the Full Disk Access action opens the expected Privacy & Security pane when TCC visibility is limited.
 - Open app Settings, enable Developer Mode, and confirm each permission detail exposes Link QA controls.
 - In Developer Mode, mark System Settings link status as `Tested working` or `Tested failed` while checking links. This status is runtime-only UI state and is not persisted.

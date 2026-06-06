@@ -79,12 +79,46 @@ final class InstalledAppTests: XCTestCase {
     let apps = [
       makeApp(name: "Not Recorded", grants: [PermissionGrant(permission: permission, status: .notRecorded, evidence: "No record.")]),
       makeApp(name: "Granted", grants: [PermissionGrant(permission: permission, status: .granted, evidence: "Matched.")]),
-      makeApp(name: "Denied", grants: [PermissionGrant(permission: permission, status: .denied, evidence: "Matched.")])
+      makeApp(name: "Denied", grants: [PermissionGrant(permission: permission, status: .denied, evidence: "Matched.")]),
+      makeApp(name: "Unavailable", grants: [PermissionGrant(permission: permission, status: .unavailable, evidence: "Unreadable.", evidenceKind: .databaseUnreadable)]),
+      makeApp(name: "Unknown", grants: [PermissionGrant(permission: permission, status: .unknown, evidence: "Matched unknown.", evidenceKind: .matchedUnknown)])
     ]
 
     let filter = AppListFilter(permission: permission, sortOrder: .permissionStatus)
 
-    XCTAssertEqual(filter.apply(to: apps).map(\.name), ["Granted", "Denied", "Not Recorded"])
+    XCTAssertEqual(filter.apply(to: apps).map(\.name), ["Granted", "Denied", "Unknown", "Unavailable", "Not Recorded"])
+  }
+
+  func testAppListFilterRecordedStatusExcludesNotRecordedApps() {
+    let permission = PermissionCatalog.all[0]
+    let apps = [
+      makeApp(name: "Granted", grants: [PermissionGrant(permission: permission, status: .granted, evidence: "Matched.")]),
+      makeApp(name: "Denied", grants: [PermissionGrant(permission: permission, status: .denied, evidence: "Matched.")]),
+      makeApp(name: "Unknown", grants: [PermissionGrant(permission: permission, status: .unknown, evidence: "Matched unknown.", evidenceKind: .matchedUnknown)]),
+      makeApp(name: "Unavailable", grants: [PermissionGrant(permission: permission, status: .unavailable, evidence: "Unreadable.", evidenceKind: .databaseUnreadable)]),
+      makeApp(name: "Not Recorded", grants: [PermissionGrant(permission: permission, status: .notRecorded, evidence: "No record.")]),
+      makeApp(name: "Missing Grant", grants: [])
+    ]
+
+    let filter = AppListFilter(
+      permission: permission,
+      permissionStatus: .recorded,
+      sortOrder: .permissionStatus
+    )
+
+    XCTAssertEqual(filter.apply(to: apps).map(\.name), ["Granted", "Denied", "Unknown", "Unavailable"])
+  }
+
+  func testAppListFilterAnyStatusIncludesMissingPermissionAsNotRecorded() {
+    let permission = PermissionCatalog.all[0]
+    let apps = [
+      makeApp(name: "Granted", grants: [PermissionGrant(permission: permission, status: .granted, evidence: "Matched.")]),
+      makeApp(name: "Missing Grant", grants: [])
+    ]
+
+    let filter = AppListFilter(permission: permission, permissionStatus: .any)
+
+    XCTAssertEqual(filter.apply(to: apps).map(\.name), ["Granted", "Missing Grant"])
   }
 
   func testPermissionStatusSummaryCountsSelectedPermissionStates() {

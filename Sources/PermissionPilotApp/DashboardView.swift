@@ -235,7 +235,11 @@ struct DashboardView: View {
               Button {
                 selectedApp = app
               } label: {
-                AppListRow(app: app, selectedPermission: store.selectedPermission)
+                AppListRow(
+                  app: app,
+                  selectedPermission: store.selectedPermission,
+                  permissionStatusFilter: permissionStatusFilter
+                )
                   .contentShape(Rectangle())
                   .background(
                     selectedApp?.id == app.id ? Color.accentColor.opacity(0.10) : Color.clear,
@@ -405,7 +409,8 @@ struct DashboardView: View {
 
   private func selectPermission(_ permission: PermissionDefinition) {
     store.selectedPermission = permission
-    permissionStatusFilter = .any
+    permissionStatusFilter = permission.evidenceSource == .systemSetting ? .any : .recorded
+    sortOrder = permission.evidenceSource == .systemSetting ? sortOrder : .permissionStatus
     selectedDashboardSection = permission.evidenceSource == .systemSetting ? .systemSetting : .apps
   }
 
@@ -695,6 +700,7 @@ private struct AppListControls: View {
 private struct AppListRow: View {
   let app: InstalledApp
   let selectedPermission: PermissionDefinition?
+  let permissionStatusFilter: PermissionStatusFilter
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -707,7 +713,8 @@ private struct AppListRow: View {
         if let selectedPermission,
            let grant = app.grant(for: selectedPermission),
            !grant.evidenceKind.isDatabaseUnavailable,
-           grant.evidenceKind != .systemSettingNotAppScoped {
+           grant.evidenceKind != .systemSettingNotAppScoped,
+           shouldShowSelectedPermissionBadge(grant) {
           StatusBadge(status: grant.status)
         }
 
@@ -730,6 +737,10 @@ private struct AppListRow: View {
     }
     .padding(.horizontal, 8)
     .padding(.vertical, 6)
+  }
+
+  private func shouldShowSelectedPermissionBadge(_ grant: PermissionGrant) -> Bool {
+    grant.status != .notRecorded || permissionStatusFilter == .any || permissionStatusFilter == .notRecorded
   }
 }
 

@@ -13,12 +13,12 @@
 | TCC evidence model | Implemented | Distinguishes database unreadable, database missing, no record, matched granted/denied/unknown, unmapped service, query failure, authorization-column source, and Apple Events target identifiers when available. |
 | First-run and empty-state guidance | Implemented | Explains unreadable TCC data, all-unknown permission states, no apps found, and no background items found without pressuring the user to grant access. |
 | Permission status summaries | Implemented | Shows granted, denied, unknown, unavailable, and not-recorded app counts in the sidebar for each permission in the current scan. |
-| Dashboard selection behavior | Implemented | Permission rows, scan summary apps, scan summary background items, scan summary stale items, installed apps, and background items are explicit clickable selections with visible selected state. |
+| Dashboard selection behavior | Implemented | Permission rows, scan summary apps, scan summary background items, scan summary stale items, installed apps, and background items are explicit clickable selections with visible selected state. Selecting an app-scoped permission focuses the app list on recorded states by default instead of flooding the list with not-recorded apps. |
 | Sensitivity labels | Implemented | High, medium, and low categories. |
 | App detail evidence view | Implemented | Groups recorded permissions by granted, denied, unknown, and unavailable; highlights high-sensitivity grants; shows concise status lines plus detailed evidence; and collapses all-not-recorded apps into a neutral empty state. |
 | Limited TCC evidence state | Implemented | When all selected-app permission evidence is unavailable, the UI shows one concise limited-evidence notice instead of repeating unknown rows. |
 | Review priority | Implemented | Conservative low/medium/high audit signal based on high-sensitivity grants and unsigned/unknown signing; not a malware verdict. |
-| App list filtering and sorting | Implemented | Search by app metadata, filter by selected permission status and signing state, and sort by name, sensitivity, status, or signature. |
+| App list filtering and sorting | Implemented | Search by app metadata, filter by selected permission status and signing state, choose recorded-only or all-app status views, and sort by name, sensitivity, status, or signature. |
 | Explain mode | Implemented | Educational descriptions for each permission. |
 | System Settings deep links | Implemented | Provides a prominent Full Disk Access action when local TCC visibility is limited and opens relevant Privacy & Security panes when macOS accepts the URL. |
 | Developer Mode link QA | Implemented | Runtime-only local status per permission for untested, tested working, and tested failed links; hidden unless Developer Mode is enabled in app settings. |
