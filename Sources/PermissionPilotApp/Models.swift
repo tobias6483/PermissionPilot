@@ -44,6 +44,7 @@ enum TCCEvidenceKind: String, Codable, Hashable {
   case matchedDenied
   case matchedUnknown
   case serviceUnmapped
+  case systemSettingNotAppScoped
   case queryFailed
   case schemaUnsupported
   case databaseRead
@@ -58,6 +59,7 @@ enum TCCEvidenceKind: String, Codable, Hashable {
     case .matchedDenied: "Matched denied"
     case .matchedUnknown: "Matched unknown"
     case .serviceUnmapped: "Service unmapped"
+    case .systemSettingNotAppScoped: "System setting"
     case .queryFailed: "Query failed"
     case .schemaUnsupported: "Schema unsupported"
     case .databaseRead: "Database read"
@@ -69,10 +71,15 @@ enum TCCEvidenceKind: String, Codable, Hashable {
     switch self {
     case .databaseUnreadable, .databaseMissing, .queryFailed, .schemaUnsupported:
       return true
-    case .noRecordFound, .matchedGranted, .matchedDenied, .matchedUnknown, .serviceUnmapped, .databaseRead, .legacy:
+    case .noRecordFound, .matchedGranted, .matchedDenied, .matchedUnknown, .serviceUnmapped, .systemSettingNotAppScoped, .databaseRead, .legacy:
       return false
     }
   }
+}
+
+enum PermissionEvidenceSource: String, Codable, Hashable {
+  case tcc
+  case systemSetting
 }
 
 enum PermissionStatusFilter: String, Codable, CaseIterable, Identifiable {
@@ -123,6 +130,7 @@ struct PermissionDefinition: Identifiable, Codable, Hashable {
   let whyItMatters: String
   let capability: String
   let revokeHint: String
+  var evidenceSource: PermissionEvidenceSource = .tcc
 }
 
 struct PermissionGrant: Identifiable, Codable, Hashable {
@@ -145,17 +153,19 @@ struct PermissionGrant: Identifiable, Codable, Hashable {
     case .noRecordFound:
       return "No matching TCC record was found in readable TCC data."
     case .databaseUnreadable:
-      return "The user TCC database could not be read."
+      return "No configured TCC database could be read."
     case .databaseMissing:
-      return "The expected user TCC database was not found."
+      return "A configured TCC database was not found."
     case .serviceUnmapped:
       return "This permission is not mapped to a TCC service yet."
+    case .systemSettingNotAppScoped:
+      return "This Privacy & Security setting is not exposed as an app-scoped TCC grant."
     case .queryFailed:
       return "The TCC query failed."
     case .schemaUnsupported:
       return "The TCC database schema was not recognized."
     case .databaseRead:
-      return "The user TCC database was read."
+      return "At least one configured TCC database was read."
     case .legacy:
       return evidence
     }
@@ -567,7 +577,7 @@ enum DashboardGuidance: Equatable {
   var message: String {
     switch self {
     case .databaseUnreadable:
-      return "macOS protects the user TCC database. Permission states are marked unavailable until PermissionPilot can read local TCC data. The app stays read-only; granting Full Disk Access can give the scanner more visibility, but it is optional."
+      return "macOS protects local TCC databases. Permission states are marked unavailable until PermissionPilot can read local TCC data. The app stays read-only; granting Full Disk Access can give the scanner more visibility, but it is optional."
     case .allPermissionStatesUnknown:
       return "No grants or denials were visible in this scan. This can happen on a fresh system or when macOS does not expose the protected database to the app."
     case .noAppsFound:

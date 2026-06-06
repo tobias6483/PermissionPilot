@@ -116,7 +116,7 @@ final class ReportExporterTests: XCTestCase {
 
   func testReportSummaryCountsAppsPermissionsAndBackgroundItems() {
     let highPermission = PermissionCatalog.all[0]
-    let mediumPermission = PermissionCatalog.all[3]
+    let mediumPermission = PermissionCatalog.all.first { $0.id == "microphone" }!
     let report = PrivacyReport(
       generatedAt: Date(timeIntervalSince1970: 0),
       apps: [

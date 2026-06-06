@@ -9,6 +9,8 @@ struct TCCScanResult {
   let evidence: String
   var evidenceKind: TCCEvidenceKind = .legacy
   var authorizationColumn: TCCAuthorizationColumn = .unknown
+  var readableDatabaseCount: Int = 0
+  var scannedDatabaseCount: Int = 1
 
   func grant(for permission: PermissionDefinition, bundleIdentifier: String?, appPath: String) -> PermissionGrant {
     guard let services = TCCServiceMap.servicesByPermissionID[permission.id] else {
@@ -24,7 +26,7 @@ struct TCCScanResult {
     guard !records.isEmpty else {
       return PermissionGrant(
         permission: permission,
-        status: evidenceKind.isDatabaseUnavailable ? .unavailable : .notRecorded,
+        status: readableDatabaseCount == 0 || evidenceKind.isDatabaseUnavailable ? .unavailable : .notRecorded,
         evidence: evidence,
         evidenceKind: evidenceKind,
         authorizationColumn: authorizationColumn
@@ -139,12 +141,50 @@ struct TCCDatabaseScanner: TCCDatabaseScanning {
   var databaseURL: URL = FileManager.default
     .homeDirectoryForCurrentUser
     .appendingPathComponent("Library/Application Support/com.apple.TCC/TCC.db")
+  var systemDatabaseURL: URL = URL(fileURLWithPath: "/Library/Application Support/com.apple.TCC/TCC.db")
 
   func scan() -> TCCScanResult {
-    guard FileManager.default.fileExists(atPath: databaseURL.path) else {
+    let databaseURLs = [databaseURL, systemDatabaseURL]
+    let results = databaseURLs.map(scanDatabase)
+    let readableResults = results.filter { $0.evidenceKind == .databaseRead }
+    let records = readableResults.flatMap(\.records)
+    let evidence = results.map(\.evidence).joined(separator: " ")
+
+    if let firstReadable = readableResults.first {
       return TCCScanResult(
+        records: records,
+        evidence: evidence,
+        evidenceKind: .databaseRead,
+        authorizationColumn: firstReadable.authorizationColumn,
+        readableDatabaseCount: readableResults.count,
+        scannedDatabaseCount: databaseURLs.count
+      )
+    }
+
+    let firstResult = results.first ?? TCCDatabaseReadResult(
+      records: [],
+      evidence: "No TCC database paths were configured.",
+      evidenceKind: .databaseMissing,
+      authorizationColumn: .unavailable
+    )
+
+    return TCCScanResult(
+      records: [],
+      evidence: evidence,
+      evidenceKind: firstResult.evidenceKind,
+      authorizationColumn: firstResult.authorizationColumn,
+      readableDatabaseCount: 0,
+      scannedDatabaseCount: databaseURLs.count
+    )
+  }
+
+  private func scanDatabase(_ databaseURL: URL) -> TCCDatabaseReadResult {
+    let scope = databaseURL.path == systemDatabaseURL.path ? "System" : "User"
+
+    guard FileManager.default.fileExists(atPath: databaseURL.path) else {
+      return TCCDatabaseReadResult(
         records: [],
-        evidence: "User TCC database was not found at the expected path: \(databaseURL.path).",
+        evidence: "\(scope) TCC database was not found at the expected path: \(databaseURL.path).",
         evidenceKind: .databaseMissing,
         authorizationColumn: .unavailable
       )
@@ -152,9 +192,9 @@ struct TCCDatabaseScanner: TCCDatabaseScanning {
 
     let columnsResult = runSQLite(arguments: ["-tabs", databaseURL.path, "PRAGMA table_info(access);"])
     guard columnsResult.exitCode == 0 else {
-      return TCCScanResult(
+      return TCCDatabaseReadResult(
         records: [],
-        evidence: "User TCC database was not readable. macOS may require Full Disk Access for this app to inspect local TCC records.",
+        evidence: "\(scope) TCC database was not readable. macOS may require Full Disk Access for this app to inspect local TCC records.",
         evidenceKind: .databaseUnreadable,
         authorizationColumn: .unavailable
       )
@@ -162,9 +202,9 @@ struct TCCDatabaseScanner: TCCDatabaseScanning {
 
     let columns = parseTableInfo(columnsResult.output)
     guard columns.contains("service"), columns.contains("client") else {
-      return TCCScanResult(
+      return TCCDatabaseReadResult(
         records: [],
-        evidence: "TCC access table did not contain expected service/client columns.",
+        evidence: "\(scope) TCC access table did not contain expected service/client columns.",
         evidenceKind: .schemaUnsupported,
         authorizationColumn: .unavailable
       )
@@ -190,17 +230,17 @@ struct TCCDatabaseScanner: TCCDatabaseScanning {
 
     guard recordsResult.exitCode == 0 else {
       let error = recordsResult.error.trimmingCharacters(in: .whitespacesAndNewlines)
-      return TCCScanResult(
+      return TCCDatabaseReadResult(
         records: [],
-        evidence: "TCC records could not be queried: \(error.isEmpty ? "sqlite3 exited with status \(recordsResult.exitCode)." : error)",
+        evidence: "\(scope) TCC records could not be queried: \(error.isEmpty ? "sqlite3 exited with status \(recordsResult.exitCode)." : error)",
         evidenceKind: .queryFailed,
         authorizationColumn: authorizationColumn
       )
     }
 
-    return TCCScanResult(
+    return TCCDatabaseReadResult(
       records: parseRecords(recordsResult.output, authorizationColumn: authorizationColumn),
-      evidence: "Read user TCC database at \(databaseURL.path) using \(authorizationColumn.rawValue).",
+      evidence: "Read \(scope.lowercased()) TCC database at \(databaseURL.path) using \(authorizationColumn.rawValue).",
       evidenceKind: .databaseRead,
       authorizationColumn: authorizationColumn
     )
@@ -261,14 +301,45 @@ struct TCCDatabaseScanner: TCCDatabaseScanning {
   }
 }
 
+private struct TCCDatabaseReadResult {
+  let records: [TCCAuthorizationRecord]
+  let evidence: String
+  let evidenceKind: TCCEvidenceKind
+  let authorizationColumn: TCCAuthorizationColumn
+}
+
 enum TCCServiceMap {
   static let servicesByPermissionID: [String: Set<String>] = [
     "screen-recording": ["kTCCServiceScreenCapture"],
+    "system-audio-recording": ["kTCCServiceAudioCapture"],
     "accessibility": ["kTCCServiceAccessibility"],
     "full-disk-access": ["kTCCServiceSystemPolicyAllFiles"],
+    "files-and-folders": [
+      "kTCCServiceSystemPolicyDesktopFolder",
+      "kTCCServiceSystemPolicyDocumentsFolder",
+      "kTCCServiceSystemPolicyDownloadsFolder",
+      "kTCCServiceSystemPolicyNetworkVolumes",
+      "kTCCServiceSystemPolicyRemovableVolumes"
+    ],
+    "app-management": ["kTCCServiceSystemPolicyAppBundles"],
+    "keyboard-monitoring": ["kTCCServiceListenEvent"],
+    "developer-tools": ["kTCCServiceDeveloperTool"],
+    "remote-desktop": ["kTCCServiceRemoteDesktop"],
     "microphone": ["kTCCServiceMicrophone"],
     "camera": ["kTCCServiceCamera"],
     "location": ["kTCCServiceLocation"],
+    "motion-fitness": ["kTCCServiceMotion"],
+    "home": ["kTCCServiceWillow"],
+    "photos": ["kTCCServicePhotos", "kTCCServicePhotosAdd"],
+    "contacts": ["kTCCServiceAddressBook"],
+    "calendars": ["kTCCServiceCalendar", "kTCCServiceCalendarFullAccess", "kTCCServiceCalendarWriteOnly"],
+    "reminders": ["kTCCServiceReminders"],
+    "media-library": ["kTCCServiceMediaLibrary"],
+    "speech-recognition": ["kTCCServiceSpeechRecognition"],
+    "focus": ["kTCCServiceFocusStatus"],
+    "local-network": ["kTCCServiceLocalNetwork"],
+    "bluetooth": ["kTCCServiceBluetoothAlways", "kTCCServiceBluetoothPeripheral"],
+    "browser-passkey-access": ["kTCCServiceWebBrowserPublicKeyCredential"],
     "automation": ["kTCCServiceAppleEvents"]
   ]
 }

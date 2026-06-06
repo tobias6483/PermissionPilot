@@ -53,10 +53,10 @@ The app currently includes:
 - Native SwiftUI dashboard.
 - Installed app inventory from `/Applications` and `~/Applications`.
 - Code signing identity inspection through `/usr/bin/codesign`.
-- Best-effort user TCC database record matching through `/usr/bin/sqlite3`.
+- Best-effort user and system TCC database record matching through `/usr/bin/sqlite3`.
 - Typed TCC evidence states for missing/unreadable databases, no records, matched grants/denials, query failures, and modern versus legacy authorization columns.
 - First-run guidance for limited TCC visibility and empty scan results.
-- Educational permission catalog and sensitivity labels.
+- Educational permission catalog and sensitivity labels for audited TCC-backed and global Privacy & Security categories.
 - A prominent Full Disk Access action when local TCC visibility is limited.
 - Developer Mode setting for runtime-only manual QA status controls for System Settings links.
 - Explicit clickable selections for permissions, scan summary apps, installed apps, and background items.
@@ -105,6 +105,6 @@ Manual QA for bundle changes:
 
 macOS intentionally restricts access to some privacy databases and permission states. PermissionPilot should explain limitations instead of pretending to see more than the OS allows.
 
-Current TCC scanning reads the user's `~/Library/Application Support/com.apple.TCC/TCC.db` only when macOS allows it. Without permission, values remain `unknown` and the app explains that the database was not readable.
+Current TCC scanning reads the user's `~/Library/Application Support/com.apple.TCC/TCC.db` and the system `/Library/Application Support/com.apple.TCC/TCC.db` only when macOS allows it. Without permission, values are marked unavailable and the app explains that the database was not readable.
 
 Granting Full Disk Access can improve local TCC visibility, but QA should treat it as optional. PermissionPilot must not write to permissions, modify System Settings, or imply that access is required.

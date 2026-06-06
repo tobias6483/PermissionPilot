@@ -133,6 +133,88 @@ final class TCCDatabaseScannerTests: XCTestCase {
     XCTAssertTrue(grant.evidence.contains("does not contain a matching record"))
   }
 
+  func testNewTCCBackedPermissionsMapToExpectedServices() {
+    let expectedServicesByPermissionID: [String: Set<String>] = [
+      "photos": ["kTCCServicePhotos", "kTCCServicePhotosAdd"],
+      "system-audio-recording": ["kTCCServiceAudioCapture"],
+      "files-and-folders": [
+        "kTCCServiceSystemPolicyDesktopFolder",
+        "kTCCServiceSystemPolicyDocumentsFolder",
+        "kTCCServiceSystemPolicyDownloadsFolder",
+        "kTCCServiceSystemPolicyNetworkVolumes",
+        "kTCCServiceSystemPolicyRemovableVolumes"
+      ],
+      "calendars": ["kTCCServiceCalendar", "kTCCServiceCalendarFullAccess", "kTCCServiceCalendarWriteOnly"],
+      "contacts": ["kTCCServiceAddressBook"],
+      "reminders": ["kTCCServiceReminders"],
+      "bluetooth": ["kTCCServiceBluetoothAlways", "kTCCServiceBluetoothPeripheral"],
+      "local-network": ["kTCCServiceLocalNetwork"],
+      "speech-recognition": ["kTCCServiceSpeechRecognition"],
+      "keyboard-monitoring": ["kTCCServiceListenEvent"],
+      "app-management": ["kTCCServiceSystemPolicyAppBundles"],
+      "developer-tools": ["kTCCServiceDeveloperTool"],
+      "remote-desktop": ["kTCCServiceRemoteDesktop"],
+      "motion-fitness": ["kTCCServiceMotion"],
+      "home": ["kTCCServiceWillow"],
+      "focus": ["kTCCServiceFocusStatus"],
+      "browser-passkey-access": ["kTCCServiceWebBrowserPublicKeyCredential"],
+      "media-library": ["kTCCServiceMediaLibrary"]
+    ]
+
+    for (permissionID, services) in expectedServicesByPermissionID {
+      XCTAssertEqual(TCCServiceMap.servicesByPermissionID[permissionID], services, permissionID)
+      XCTAssertNotNil(PermissionCatalog.all.first { $0.id == permissionID }, permissionID)
+    }
+  }
+
+  func testNewMappedPermissionCanMatchAnyMappedService() {
+    let permission = PermissionCatalog.all.first { $0.id == "files-and-folders" }!
+    let scan = TCCScanResult(
+      records: [
+        TCCAuthorizationRecord(
+          service: "kTCCServiceSystemPolicyDocumentsFolder",
+          client: "com.example.Editor",
+          clientType: 0,
+          authorizationValue: 2,
+          authorizationColumn: .authValue
+        )
+      ],
+      evidence: "Read test database.",
+      evidenceKind: .databaseRead,
+      authorizationColumn: .authValue
+    )
+
+    let grant = scan.grant(
+      for: permission,
+      bundleIdentifier: "com.example.Editor",
+      appPath: "/Applications/Editor.app"
+    )
+
+    XCTAssertEqual(grant.status, .granted)
+    XCTAssertEqual(grant.evidenceKind, .matchedGranted)
+    XCTAssertTrue(grant.evidence.contains("kTCCServiceSystemPolicyDocumentsFolder"))
+  }
+
+  func testSystemSettingPermissionsAreNotTCCMapped() {
+    let systemSettingIDs = [
+      "sensitive-content-warning",
+      "blocked-contacts",
+      "analytics-improvements",
+      "apple-advertising",
+      "apple-intelligence-report",
+      "filevault",
+      "background-security-improvements",
+      "blocked-system-software",
+      "system-wide-settings-password"
+    ]
+
+    for permissionID in systemSettingIDs {
+      let permission = PermissionCatalog.all.first { $0.id == permissionID }
+      XCTAssertEqual(permission?.evidenceSource, .systemSetting, permissionID)
+      XCTAssertNil(TCCServiceMap.servicesByPermissionID[permissionID], permissionID)
+    }
+  }
+
   func testDatabaseUnavailableEvidenceRemainsUnavailable() {
     let permission = PermissionCatalog.all.first { $0.id == "microphone" }!
     let scan = TCCScanResult(
@@ -191,6 +273,27 @@ final class TCCDatabaseScannerTests: XCTestCase {
 
     XCTAssertTrue(record.matches(bundleIdentifier: nil, appPath: "/Applications/App.app"))
     XCTAssertFalse(record.matches(bundleIdentifier: nil, appPath: "/Applications/App.app.localized"))
+  }
+
+  func testScanResultPreservesReadableDatabaseMetadataForNoRecordState() {
+    let permission = PermissionCatalog.all.first { $0.id == "camera" }!
+    let scan = TCCScanResult(
+      records: [],
+      evidence: "Read user and system TCC databases.",
+      evidenceKind: .databaseRead,
+      authorizationColumn: .authValue,
+      readableDatabaseCount: 2,
+      scannedDatabaseCount: 2
+    )
+
+    let grant = scan.grant(
+      for: permission,
+      bundleIdentifier: "com.example.App",
+      appPath: "/Applications/Example.app"
+    )
+
+    XCTAssertEqual(grant.status, .notRecorded)
+    XCTAssertEqual(grant.evidenceKind, .databaseRead)
   }
 
   func testRecognizesAllRequestedEvidenceKinds() {

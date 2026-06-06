@@ -4,7 +4,16 @@ All notable changes to PermissionPilot will be documented in this file.
 
 ## Unreleased
 
-No unreleased changes yet.
+## Added
+
+- Expanded the known TCC-backed permission catalog and service map to cover Photos, Files & Folders, Calendars, Contacts, Reminders, Bluetooth, Local Network, Speech Recognition, Keyboard Monitoring, App Management, Developer Tools, and Media & Apple Music.
+- Added Privacy & Security audit coverage for System Audio Recording, Motion & Fitness, Home, Focus, Remote Desktop, Browser Passkey Access, Sensitive Content Warning, Blocked Contacts, Analytics & Improvements, Apple Advertising, Apple Intelligence Report, FileVault, Background Security Improvements, Blocked System Software, and System-Wide Settings Protection.
+- Added system TCC database scanning alongside the user TCC database.
+- Added a separate system settings evidence scanner for global Privacy & Security categories that are not per-app TCC grants.
+
+## Changed
+
+- Grouped the longer permission sidebar and made the background-item scan summary rows selectable, including a stale-only background item view.
 
 ## v0.1.0-alpha.2 - 2026-06-06
 

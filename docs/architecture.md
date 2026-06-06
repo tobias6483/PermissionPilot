@@ -9,9 +9,10 @@ PermissionPilot currently ships as a Swift Package Manager executable target nam
 - `DashboardStore`: Main actor state container for scan results.
 - `AppInventoryScanner`: Finds `.app` bundles in `/Applications` and `~/Applications`.
 - `CodeSignatureScanner`: Uses `/usr/bin/codesign` to inspect app signing identity metadata.
-- `TCCDatabaseScanner`: Performs best-effort reads of the user's TCC database through `/usr/bin/sqlite3` and maps known services to permissions.
+- `TCCDatabaseScanner`: Performs best-effort reads of the user and system TCC databases through `/usr/bin/sqlite3` and maps known TCC services to privacy permission categories.
+- `SystemPrivacySettingsScanner`: Represents global or system-scoped Privacy & Security categories without forcing them into per-app TCC evidence.
 - `BackgroundItemScanner`: Reads LaunchAgent and LaunchDaemon plists from common locations, scans `/Library/PrivilegedHelperTools`, and parses best-effort `sfltool dumpbtm` output for login items and background tasks.
-- `PermissionCatalog`: Educational permission definitions, sensitivity labels, and System Settings URLs.
+- `PermissionCatalog`: Educational permission definitions, sensitivity labels, evidence-source metadata, and System Settings URLs for audited Privacy & Security categories.
 - `ReportExporter`: Markdown and JSON report generation.
 - `SystemSettingsLinker`: Opens relevant macOS System Settings panes.
 
@@ -25,6 +26,7 @@ PermissionPilot currently ships as a Swift Package Manager executable target nam
 ## Current Limitations
 
 - TCC permission states depend on macOS allowing local database access.
+- Some Privacy & Security panes are not represented as app-scoped TCC service rows. These are modeled through `SystemPrivacySettingsScanner` as not app-scoped until a safe local evidence source is implemented.
 - Code signing metadata should be presented as identity context, not as a guarantee that an app is safe.
 - Login Items scanning depends on undocumented `sfltool dumpbtm` output and should be treated as best-effort.
 - Privileged helper stale detection is heuristic and should be presented as a review signal.

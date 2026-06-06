@@ -1,6 +1,85 @@
 import AppKit
 import SwiftUI
 
+private enum DashboardSection {
+  case apps
+  case backgroundItems
+  case staleBackgroundItems
+}
+
+private struct PermissionSidebarGroup: Identifiable {
+  let id: String
+  let title: String
+  let permissionIDs: [String]
+
+  var permissions: [PermissionDefinition] {
+    permissionIDs.compactMap { id in
+      PermissionCatalog.all.first { $0.id == id }
+    }
+  }
+
+  static let all: [PermissionSidebarGroup] = [
+    PermissionSidebarGroup(
+      id: "system-access",
+      title: "System Access",
+      permissionIDs: [
+        "screen-recording",
+        "system-audio-recording",
+        "accessibility",
+        "full-disk-access",
+        "files-and-folders",
+        "app-management",
+        "keyboard-monitoring",
+        "developer-tools",
+        "remote-desktop",
+        "automation"
+      ]
+    ),
+    PermissionSidebarGroup(
+      id: "device-network",
+      title: "Device & Network",
+      permissionIDs: [
+        "microphone",
+        "camera",
+        "location",
+        "motion-fitness",
+        "bluetooth",
+        "local-network",
+        "speech-recognition",
+        "focus"
+      ]
+    ),
+    PermissionSidebarGroup(
+      id: "personal-data",
+      title: "Personal Data",
+      permissionIDs: [
+        "photos",
+        "contacts",
+        "calendars",
+        "reminders",
+        "media-library",
+        "home",
+        "browser-passkey-access"
+      ]
+    ),
+    PermissionSidebarGroup(
+      id: "system-services",
+      title: "System & Apple Services",
+      permissionIDs: [
+        "sensitive-content-warning",
+        "blocked-contacts",
+        "analytics-improvements",
+        "apple-advertising",
+        "apple-intelligence-report",
+        "filevault",
+        "background-security-improvements",
+        "blocked-system-software",
+        "system-wide-settings-password"
+      ]
+    )
+  ]
+}
+
 struct DashboardView: View {
   @EnvironmentObject private var store: DashboardStore
   @AppStorage("developerModeEnabled") private var developerModeEnabled = false
@@ -16,13 +95,14 @@ struct DashboardView: View {
   @State private var backgroundStaleOnly = false
   @State private var backgroundSortOrder: BackgroundItemSortOrder = .label
   @State private var systemSettingsLinkStatuses: [String: SystemSettingsLinkStatus] = [:]
+  @State private var selectedDashboardSection: DashboardSection = .apps
 
   var body: some View {
     NavigationSplitView {
       sidebar
         .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
     } content: {
-      appList
+      contentPane
         .navigationSplitViewColumnWidth(min: 460, ideal: 620, max: 820)
     } detail: {
       detailPane
@@ -66,41 +146,70 @@ struct DashboardView: View {
 
   private var sidebar: some View {
     List {
-      Section("Permissions") {
-        ForEach(PermissionCatalog.all) { permission in
-          Button {
-            store.selectedPermission = permission
-            permissionStatusFilter = .any
-          } label: {
-            PermissionSidebarRow(
-              permission: permission,
-              summary: PermissionStatusSummary(permission: permission, apps: store.apps),
-              symbol: symbol(for: permission),
-              isSelected: store.selectedPermission == permission
-            )
+      ForEach(PermissionSidebarGroup.all) { group in
+        Section(group.title) {
+          ForEach(group.permissions) { permission in
+            Button {
+              selectApps(permission: permission)
+            } label: {
+              PermissionSidebarRow(
+                permission: permission,
+                summary: PermissionStatusSummary(permission: permission, apps: store.apps),
+                symbol: symbol(for: permission),
+                isSelected: selectedDashboardSection == .apps && store.selectedPermission == permission
+              )
+            }
+            .buttonStyle(.plain)
           }
-          .buttonStyle(.plain)
         }
       }
 
       Section("Scan Summary") {
         Button {
-          store.selectedPermission = nil
-          permissionStatusFilter = .any
+          selectApps(permission: nil)
         } label: {
           SidebarSummaryRow(
             title: "\(store.apps.count) apps",
             symbol: "app.dashed",
-            isSelected: store.selectedPermission == nil
+            isSelected: selectedDashboardSection == .apps && store.selectedPermission == nil
           )
         }
         .buttonStyle(.plain)
 
-        SidebarSummaryRow(title: "\(store.backgroundItems.count) background items", symbol: "gearshape.2")
-        SidebarSummaryRow(title: "\(staleBackgroundItemCount) potentially stale", symbol: "exclamationmark.triangle")
+        Button {
+          selectBackgroundItems(staleOnly: false)
+        } label: {
+          SidebarSummaryRow(
+            title: "\(store.backgroundItems.count) background items",
+            symbol: "gearshape.2",
+            isSelected: selectedDashboardSection == .backgroundItems
+          )
+        }
+        .buttonStyle(.plain)
+
+        Button {
+          selectBackgroundItems(staleOnly: true)
+        } label: {
+          SidebarSummaryRow(
+            title: "\(staleBackgroundItemCount) potentially stale",
+            symbol: "exclamationmark.triangle",
+            isSelected: selectedDashboardSection == .staleBackgroundItems
+          )
+        }
+        .buttonStyle(.plain)
       }
     }
     .navigationTitle("PermissionPilot")
+  }
+
+  @ViewBuilder
+  private var contentPane: some View {
+    switch selectedDashboardSection {
+    case .apps:
+      appList
+    case .backgroundItems, .staleBackgroundItems:
+      backgroundItemsList
+    }
   }
 
   private var appList: some View {
@@ -145,38 +254,33 @@ struct DashboardView: View {
     }
   }
 
+  private var backgroundItemsList: some View {
+    ScrollView {
+      BackgroundItemsView(
+        items: store.backgroundItems,
+        selectedItem: $selectedBackgroundItem,
+        searchText: $backgroundSearchText,
+        kindFilter: $backgroundKindFilter,
+        staleOnly: $backgroundStaleOnly,
+        sortOrder: $backgroundSortOrder,
+        showsSelectedDetail: false
+      )
+      .padding(16)
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .navigationTitle(selectedDashboardSection == .staleBackgroundItems ? "Potentially Stale" : "Background Items")
+  }
+
   @ViewBuilder
   private var detailPane: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
-        ForEach(guidanceItems, id: \.self) { guidance in
-          GuidanceCard(guidance: guidance)
+        switch selectedDashboardSection {
+        case .apps:
+          appsDetailContent
+        case .backgroundItems, .staleBackgroundItems:
+          backgroundItemDetailContent
         }
-
-        if let permission = store.selectedPermission {
-          PermissionExplanationCard(
-            permission: permission,
-            summary: PermissionStatusSummary(permission: permission, apps: store.apps),
-            developerModeEnabled: developerModeEnabled,
-            linkStatus: bindingForSystemSettingsStatus(permission)
-          )
-        }
-
-        if let selectedApp {
-          AppIdentityDetail(app: selectedApp)
-          AppPermissionDetail(app: selectedApp)
-        } else {
-          EmptySelectionView()
-        }
-
-        BackgroundItemsView(
-          items: store.backgroundItems,
-          selectedItem: $selectedBackgroundItem,
-          searchText: $backgroundSearchText,
-          kindFilter: $backgroundKindFilter,
-          staleOnly: $backgroundStaleOnly,
-          sortOrder: $backgroundSortOrder
-        )
 
         if let exportMessage {
           Text(exportMessage)
@@ -188,7 +292,48 @@ struct DashboardView: View {
       .frame(maxWidth: 680, alignment: .leading)
       .frame(maxWidth: .infinity, alignment: .leading)
     }
-    .navigationTitle(selectedApp?.name ?? "Details")
+    .navigationTitle(detailTitle)
+  }
+
+  @ViewBuilder
+  private var appsDetailContent: some View {
+    ForEach(guidanceItems, id: \.self) { guidance in
+      GuidanceCard(guidance: guidance)
+    }
+
+    if let permission = store.selectedPermission {
+      PermissionExplanationCard(
+        permission: permission,
+        summary: PermissionStatusSummary(permission: permission, apps: store.apps),
+        developerModeEnabled: developerModeEnabled,
+        linkStatus: bindingForSystemSettingsStatus(permission)
+      )
+    }
+
+    if let selectedApp {
+      AppIdentityDetail(app: selectedApp)
+      AppPermissionDetail(app: selectedApp)
+    } else {
+      EmptySelectionView()
+    }
+  }
+
+  @ViewBuilder
+  private var backgroundItemDetailContent: some View {
+    if let selectedBackgroundItem {
+      BackgroundItemDetail(item: selectedBackgroundItem)
+    } else {
+      EmptyBackgroundItemSelectionView()
+    }
+  }
+
+  private var detailTitle: String {
+    switch selectedDashboardSection {
+    case .apps:
+      return selectedApp?.name ?? "Details"
+    case .backgroundItems, .staleBackgroundItems:
+      return selectedBackgroundItem?.label ?? "Background Item"
+    }
   }
 
   private var filteredApps: [InstalledApp] {
@@ -218,15 +363,57 @@ struct DashboardView: View {
     store.backgroundItems.filter(\.isPotentiallyStale).count
   }
 
+  private func selectApps(permission: PermissionDefinition?) {
+    selectedDashboardSection = .apps
+    store.selectedPermission = permission
+    permissionStatusFilter = .any
+  }
+
+  private func selectBackgroundItems(staleOnly: Bool) {
+    selectedDashboardSection = staleOnly ? .staleBackgroundItems : .backgroundItems
+    store.selectedPermission = nil
+    backgroundSearchText = ""
+    backgroundKindFilter = .any
+    backgroundStaleOnly = staleOnly
+    backgroundSortOrder = staleOnly ? .stale : .label
+  }
+
   private func symbol(for permission: PermissionDefinition) -> String {
     switch permission.id {
     case "screen-recording": "rectangle.on.rectangle"
+    case "system-audio-recording": "speaker.wave.3"
     case "accessibility": "figure"
     case "full-disk-access": "internaldrive"
+    case "files-and-folders": "folder"
+    case "app-management": "app.badge"
+    case "keyboard-monitoring": "keyboard"
+    case "developer-tools": "hammer"
+    case "remote-desktop": "desktopcomputer"
     case "microphone": "mic"
     case "camera": "camera"
     case "location": "location"
+    case "motion-fitness": "figure.run"
+    case "photos": "photo.on.rectangle"
+    case "contacts": "person.crop.circle"
+    case "calendars": "calendar"
+    case "reminders": "checklist"
+    case "media-library": "music.note"
+    case "home": "house"
+    case "speech-recognition": "waveform"
+    case "focus": "moon"
+    case "local-network": "network"
+    case "bluetooth": "dot.radiowaves.left.and.right"
+    case "browser-passkey-access": "key"
     case "automation": "applescript"
+    case "sensitive-content-warning": "eye.trianglebadge.exclamationmark"
+    case "blocked-contacts": "person.crop.circle.badge.xmark"
+    case "analytics-improvements": "chart.xyaxis.line"
+    case "apple-advertising": "megaphone"
+    case "apple-intelligence-report": "apple.intelligence"
+    case "filevault": "lock"
+    case "background-security-improvements": "checkmark.shield"
+    case "blocked-system-software": "exclamationmark.shield"
+    case "system-wide-settings-password": "person.badge.key"
     default: "lock.shield"
     }
   }
@@ -455,7 +642,10 @@ private struct AppListRow: View {
           .lineLimit(1)
         Spacer()
 
-        if let selectedPermission, let grant = app.grant(for: selectedPermission), !grant.evidenceKind.isDatabaseUnavailable {
+        if let selectedPermission,
+           let grant = app.grant(for: selectedPermission),
+           !grant.evidenceKind.isDatabaseUnavailable,
+           grant.evidenceKind != .systemSettingNotAppScoped {
           StatusBadge(status: grant.status)
         }
 
@@ -671,7 +861,9 @@ private struct AppPermissionDetail: View {
   }
 
   private var recordedPermissions: [PermissionGrant] {
-    app.permissions.filter { $0.status != .notRecorded }
+    app.permissions.filter {
+      $0.status != .notRecorded && $0.evidenceKind != .systemSettingNotAppScoped
+    }
   }
 
   private var recordedPermissionsByStatus: [PermissionStatus: [PermissionGrant]] {
@@ -712,7 +904,7 @@ private struct PermissionEvidenceLimitedNotice: View {
       Label("Permission evidence is limited", systemImage: "lock.shield")
         .font(.subheadline.weight(.semibold))
 
-      Text("PermissionPilot cannot read the local TCC database yet, so per-app grants and denials are hidden instead of repeating unknown rows. Use the Full Disk Access prompt above to improve scan visibility.")
+      Text("PermissionPilot cannot read local TCC databases yet, so per-app grants and denials are hidden instead of repeating unknown rows. Use the Full Disk Access prompt above to improve scan visibility.")
         .font(.caption)
         .foregroundStyle(.secondary)
         .fixedSize(horizontal: false, vertical: true)
@@ -770,6 +962,7 @@ private struct BackgroundItemsView: View {
   @Binding var kindFilter: BackgroundItemKindFilter
   @Binding var staleOnly: Bool
   @Binding var sortOrder: BackgroundItemSortOrder
+  var showsSelectedDetail = true
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
@@ -820,7 +1013,7 @@ private struct BackgroundItemsView: View {
             .stroke(.quaternary)
         }
 
-        if let selectedItem {
+        if showsSelectedDetail, let selectedItem {
           BackgroundItemDetail(item: selectedItem)
         }
       }
@@ -1041,6 +1234,16 @@ private struct EmptySelectionView: View {
       "Select An App",
       systemImage: "sidebar.left",
       description: Text("Choose an installed app to inspect its current permission inventory.")
+    )
+  }
+}
+
+private struct EmptyBackgroundItemSelectionView: View {
+  var body: some View {
+    ContentUnavailableView(
+      "Select A Background Item",
+      systemImage: "gearshape.2",
+      description: Text("Choose a launch record, login item, background task, or helper to inspect its evidence.")
     )
   }
 }

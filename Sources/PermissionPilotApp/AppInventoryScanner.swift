@@ -9,6 +9,7 @@ struct AppInventoryScanner: AppInventoryScanning {
   var fileManager: FileManager = .default
   var tccScanner: TCCDatabaseScanning = TCCDatabaseScanner()
   var codeSignatureScanner: CodeSignatureScanning = CodeSignatureScanner()
+  var systemPrivacySettingsScanner: SystemPrivacySettingsScanning = SystemPrivacySettingsScanner()
 
   func scanInstalledApps() -> [InstalledApp] {
     let tccScan = tccScanner.scan()
@@ -52,8 +53,13 @@ struct AppInventoryScanner: AppInventoryScanning {
       bundleIdentifier: bundle?.bundleIdentifier,
       path: url.path,
       signingInfo: codeSignatureScanner.inspectApp(at: url),
-      permissions: PermissionCatalog.all.map {
-        tccScan.grant(for: $0, bundleIdentifier: bundle?.bundleIdentifier, appPath: url.path)
+      permissions: PermissionCatalog.all.map { permission in
+        switch permission.evidenceSource {
+        case .tcc:
+          return tccScan.grant(for: permission, bundleIdentifier: bundle?.bundleIdentifier, appPath: url.path)
+        case .systemSetting:
+          return systemPrivacySettingsScanner.grant(for: permission)
+        }
       }
     )
   }
