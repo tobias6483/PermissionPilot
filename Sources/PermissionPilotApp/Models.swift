@@ -14,7 +14,19 @@ enum Sensitivity: String, Codable, CaseIterable, Comparable {
 enum PermissionStatus: String, Codable, CaseIterable {
   case granted
   case denied
+  case notRecorded
+  case unavailable
   case unknown
+
+  var displayName: String {
+    switch self {
+    case .granted: "Granted"
+    case .denied: "Denied"
+    case .notRecorded: "Not recorded"
+    case .unavailable: "Unavailable"
+    case .unknown: "Unknown"
+    }
+  }
 }
 
 enum TCCAuthorizationColumn: String, Codable, Hashable {
@@ -67,6 +79,8 @@ enum PermissionStatusFilter: String, Codable, CaseIterable, Identifiable {
   case any = "Any"
   case granted = "Granted"
   case denied = "Denied"
+  case notRecorded = "Not Recorded"
+  case unavailable = "Unavailable"
   case unknown = "Unknown"
 
   var id: String { rawValue }
@@ -76,6 +90,8 @@ enum PermissionStatusFilter: String, Codable, CaseIterable, Identifiable {
     case .any: nil
     case .granted: .granted
     case .denied: .denied
+    case .notRecorded: .notRecorded
+    case .unavailable: .unavailable
     case .unknown: .unknown
     }
   }
@@ -127,7 +143,7 @@ struct PermissionGrant: Identifiable, Codable, Hashable {
     case .matchedUnknown:
       return "TCC record exists, but its authorization value is not recognized."
     case .noRecordFound:
-      return "No matching TCC record was found."
+      return "No matching TCC record was found in readable TCC data."
     case .databaseUnreadable:
       return "The user TCC database could not be read."
     case .databaseMissing:
@@ -154,10 +170,12 @@ struct PermissionStatusSummary: Equatable {
   let permission: PermissionDefinition
   let granted: Int
   let denied: Int
+  let notRecorded: Int
+  let unavailable: Int
   let unknown: Int
 
   var total: Int {
-    granted + denied + unknown
+    granted + denied + notRecorded + unavailable + unknown
   }
 
   var hasKnownState: Bool {
@@ -169,14 +187,20 @@ struct PermissionStatusSummary: Equatable {
 
     var granted = 0
     var denied = 0
+    var notRecorded = 0
+    var unavailable = 0
     var unknown = 0
 
     for app in apps {
-      switch app.grant(for: permission)?.status ?? .unknown {
+      switch app.grant(for: permission)?.status ?? .notRecorded {
       case .granted:
         granted += 1
       case .denied:
         denied += 1
+      case .notRecorded:
+        notRecorded += 1
+      case .unavailable:
+        unavailable += 1
       case .unknown:
         unknown += 1
       }
@@ -184,6 +208,8 @@ struct PermissionStatusSummary: Equatable {
 
     self.granted = granted
     self.denied = denied
+    self.notRecorded = notRecorded
+    self.unavailable = unavailable
     self.unknown = unknown
   }
 }
@@ -406,6 +432,8 @@ struct PermissionSummary: Codable, Equatable {
   let sensitivity: Sensitivity
   let granted: Int
   let denied: Int
+  let notRecorded: Int
+  let unavailable: Int
   let unknown: Int
 
   init(summary: PermissionStatusSummary) {
@@ -414,6 +442,8 @@ struct PermissionSummary: Codable, Equatable {
     sensitivity = summary.permission.sensitivity
     granted = summary.granted
     denied = summary.denied
+    notRecorded = summary.notRecorded
+    unavailable = summary.unavailable
     unknown = summary.unknown
   }
 }
@@ -509,6 +539,8 @@ struct AppListFilter: Equatable {
     case .granted: return 0
     case .denied: return 1
     case .unknown: return 2
+    case .unavailable: return 3
+    case .notRecorded: return 4
     }
   }
 
@@ -535,7 +567,7 @@ enum DashboardGuidance: Equatable {
   var message: String {
     switch self {
     case .databaseUnreadable:
-      return "macOS protects the user TCC database. PermissionPilot stays read-only; granting Full Disk Access can give the scanner more visibility, but it is optional."
+      return "macOS protects the user TCC database. Permission states are marked unavailable until PermissionPilot can read local TCC data. The app stays read-only; granting Full Disk Access can give the scanner more visibility, but it is optional."
     case .allPermissionStatesUnknown:
       return "No grants or denials were visible in this scan. This can happen on a fresh system or when macOS does not expose the protected database to the app."
     case .noAppsFound:

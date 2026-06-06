@@ -9,7 +9,7 @@ final class InstalledAppTests: XCTestCase {
       bundleIdentifier: "com.example.App",
       path: "/Applications/Example.app",
       permissions: [
-        PermissionGrant(permission: PermissionCatalog.all[0], status: .unknown, evidence: "No record."),
+        PermissionGrant(permission: PermissionCatalog.all[0], status: .notRecorded, evidence: "No record."),
         PermissionGrant(permission: PermissionCatalog.all[3], status: .granted, evidence: "Matched record.")
       ]
     )
@@ -36,7 +36,7 @@ final class InstalledAppTests: XCTestCase {
         signingInfo: signed,
         grants: [
           PermissionGrant(permission: screenRecording, status: .granted, evidence: "Matched."),
-          PermissionGrant(permission: microphone, status: .unknown, evidence: "No record.")
+          PermissionGrant(permission: microphone, status: .notRecorded, evidence: "No record.")
         ]
       ),
       makeApp(
@@ -55,8 +55,8 @@ final class InstalledAppTests: XCTestCase {
         path: "/Applications/Gamma Notes.app",
         signingInfo: signed,
         grants: [
-          PermissionGrant(permission: screenRecording, status: .unknown, evidence: "No record."),
-          PermissionGrant(permission: microphone, status: .unknown, evidence: "No record.")
+          PermissionGrant(permission: screenRecording, status: .notRecorded, evidence: "No record."),
+          PermissionGrant(permission: microphone, status: .notRecorded, evidence: "No record.")
         ]
       )
     ]
@@ -75,14 +75,14 @@ final class InstalledAppTests: XCTestCase {
   func testAppListFilterSortsBySelectedPermissionStatus() {
     let permission = PermissionCatalog.all[0]
     let apps = [
-      makeApp(name: "Unknown", grants: [PermissionGrant(permission: permission, status: .unknown, evidence: "No record.")]),
+      makeApp(name: "Not Recorded", grants: [PermissionGrant(permission: permission, status: .notRecorded, evidence: "No record.")]),
       makeApp(name: "Granted", grants: [PermissionGrant(permission: permission, status: .granted, evidence: "Matched.")]),
       makeApp(name: "Denied", grants: [PermissionGrant(permission: permission, status: .denied, evidence: "Matched.")])
     ]
 
     let filter = AppListFilter(permission: permission, sortOrder: .permissionStatus)
 
-    XCTAssertEqual(filter.apply(to: apps).map(\.name), ["Granted", "Denied", "Unknown"])
+    XCTAssertEqual(filter.apply(to: apps).map(\.name), ["Granted", "Denied", "Not Recorded"])
   }
 
   func testPermissionStatusSummaryCountsSelectedPermissionStates() {
@@ -93,7 +93,7 @@ final class InstalledAppTests: XCTestCase {
         name: "Granted",
         grants: [
           PermissionGrant(permission: screenRecording, status: .granted, evidence: "Matched."),
-          PermissionGrant(permission: microphone, status: .unknown, evidence: "No record.")
+          PermissionGrant(permission: microphone, status: .notRecorded, evidence: "No record.")
         ]
       ),
       makeApp(
@@ -102,7 +102,7 @@ final class InstalledAppTests: XCTestCase {
       ),
       makeApp(
         name: "Unknown",
-        grants: [PermissionGrant(permission: screenRecording, status: .unknown, evidence: "No record.")]
+        grants: [PermissionGrant(permission: screenRecording, status: .unknown, evidence: "Matched unknown.", evidenceKind: .matchedUnknown)]
       ),
       makeApp(
         name: "Missing",
@@ -114,7 +114,9 @@ final class InstalledAppTests: XCTestCase {
 
     XCTAssertEqual(summary.granted, 1)
     XCTAssertEqual(summary.denied, 1)
-    XCTAssertEqual(summary.unknown, 2)
+    XCTAssertEqual(summary.unknown, 1)
+    XCTAssertEqual(summary.notRecorded, 1)
+    XCTAssertEqual(summary.unavailable, 0)
     XCTAssertEqual(summary.total, 4)
     XCTAssertTrue(summary.hasKnownState)
   }
@@ -140,7 +142,7 @@ final class InstalledAppTests: XCTestCase {
       name: "Unsigned",
       signingInfo: .unknown,
       grants: [
-        PermissionGrant(permission: PermissionCatalog.all[0], status: .unknown, evidence: "No record.", evidenceKind: .noRecordFound)
+        PermissionGrant(permission: PermissionCatalog.all[0], status: .notRecorded, evidence: "No record.", evidenceKind: .noRecordFound)
       ]
     )
 
@@ -159,7 +161,7 @@ final class InstalledAppTests: XCTestCase {
       name: "Signed",
       signingInfo: signed,
       grants: [
-        PermissionGrant(permission: PermissionCatalog.all[0], status: .unknown, evidence: "No record.", evidenceKind: .noRecordFound)
+        PermissionGrant(permission: PermissionCatalog.all[0], status: .notRecorded, evidence: "No record.", evidenceKind: .noRecordFound)
       ]
     )
 
@@ -170,12 +172,23 @@ final class InstalledAppTests: XCTestCase {
     let app = makeApp(
       name: "Unreadable",
       grants: [
-        PermissionGrant(permission: PermissionCatalog.all[0], status: .unknown, evidence: "Unreadable.", evidenceKind: .databaseUnreadable)
+        PermissionGrant(permission: PermissionCatalog.all[0], status: .unavailable, evidence: "Unreadable.", evidenceKind: .databaseUnreadable)
       ]
     )
 
     XCTAssertEqual(DashboardGuidanceEvaluator.guidance(apps: [app], backgroundItems: []), [.databaseUnreadable, .noBackgroundItemsFound])
     XCTAssertEqual(DashboardGuidanceEvaluator.guidance(apps: [], backgroundItems: []), [.noAppsFound, .noBackgroundItemsFound])
+  }
+
+  func testGuidanceDoesNotTreatNotRecordedAsUnknownWarning() {
+    let app = makeApp(
+      name: "No Records",
+      grants: [
+        PermissionGrant(permission: PermissionCatalog.all[0], status: .notRecorded, evidence: "No record.", evidenceKind: .noRecordFound)
+      ]
+    )
+
+    XCTAssertEqual(DashboardGuidanceEvaluator.guidance(apps: [app], backgroundItems: [BackgroundItem(id: "agent", kind: .launchAgent, label: "Agent", path: "/Library/LaunchAgents/agent.plist", executable: nil, isPotentiallyStale: false)]), [])
   }
 
   private func makeApp(

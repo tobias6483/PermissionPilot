@@ -28,7 +28,7 @@ final class ReportExporterTests: XCTestCase {
           permissions: [
             PermissionGrant(
               permission: PermissionCatalog.all[0],
-              status: .unknown,
+              status: .notRecorded,
               evidence: "No local TCC evidence yet.",
               evidenceKind: .noRecordFound
             )
@@ -143,7 +143,7 @@ final class ReportExporterTests: XCTestCase {
           bundleIdentifier: "com.example.unknown",
           path: "/Applications/Unknown.app",
           permissions: [
-            PermissionGrant(permission: highPermission, status: .unknown, evidence: "No record.")
+            PermissionGrant(permission: highPermission, status: .notRecorded, evidence: "No record.")
           ]
         )
       ],
@@ -164,6 +164,7 @@ final class ReportExporterTests: XCTestCase {
     XCTAssertEqual(summary.backgroundItemKindCounts[.launchAgent], 1)
     XCTAssertEqual(summary.backgroundItemKindCounts[.privilegedHelperTool], 1)
     XCTAssertEqual(summary.permissionSummaries.first { $0.id == highPermission.id }?.granted, 1)
-    XCTAssertEqual(summary.permissionSummaries.first { $0.id == highPermission.id }?.unknown, 1)
+    XCTAssertEqual(summary.permissionSummaries.first { $0.id == highPermission.id }?.unknown, 0)
+    XCTAssertEqual(summary.permissionSummaries.first { $0.id == highPermission.id }?.notRecorded, 1)
   }
 }
