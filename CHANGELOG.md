@@ -6,6 +6,7 @@ All notable changes to PermissionPilot will be documented in this file.
 
 ## Changed
 
+- Focused app-scoped permission selections on recorded grants/denials/unknown/unavailable states by default, while keeping `Any` and `Not Recorded` status filters available for broader audits.
 - Clarified documentation for app-scoped permissions, global/system Privacy & Security settings, installed app identity, and background execution evidence.
 - Kept global/system Privacy & Security settings out of per-app permission summaries, app lists, and app detail panes.
 
